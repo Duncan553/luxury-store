@@ -1,0 +1,659 @@
+// AdminDashboard.jsx — shell only.
+// Layout (top → bottom):
+//   1. Topbar
+//   2. KPI strip  (always visible, useMemo-recomputed from fetched data)
+//   3. Action Center (only when there is something to fix)
+//   4. Tab bar     (Orders | Products | Categories | Reviews | Settings)
+//   5. Active tab  (React.lazy — only the current tab is mounted)
+//
+// Realtime strategy:
+//   - payments, products, reviews: always subscribed (KPI + their tabs need them)
+//   - categories: only subscribed when the Categories tab is active
+import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import { fmt, BLANK_SETTINGS } from '../lib/adminUtils';
+import './AdminDashboard.css';
+
+// ── Lazy-loaded tabs ──────────────────────────────────────────────────────────
+const OrdersTab     = lazy(() => import('./admin/OrdersTab'));
+const ProductsTab   = lazy(() => import('./admin/ProductsTab'));
+const CategoriesTab = lazy(() => import('./admin/CategoriesTab'));
+const ReviewsTab    = lazy(() => import('./admin/ReviewsTab'));
+const SettingsTab   = lazy(() => import('./admin/SettingsTab'));
+
+// ── Nairobi timezone helpers (UTC+3, no DST) ──────────────────────────────────
+const KE_OFFSET_MS = 3 * 60 * 60 * 1000;
+
+function startOfTodayKE() {
+  // Shift current UTC time into Nairobi "space", zero out time component,
+  // then shift back to get the real UTC ms of Nairobi midnight.
+  const inKE = new Date(Date.now() + KE_OFFSET_MS);
+  const midnight = Date.UTC(inKE.getUTCFullYear(), inKE.getUTCMonth(), inKE.getUTCDate());
+  return midnight - KE_OFFSET_MS;
+}
+
+function startOfWeekKE() {
+  const todayUTC  = startOfTodayKE();
+  const dow       = new Date(Date.now() + KE_OFFSET_MS).getUTCDay(); // 0=Sun
+  const daysBack  = dow === 0 ? 6 : dow - 1; // Mon=0 offset
+  return todayUTC - daysBack * 86_400_000;
+}
+
+// D2: WhatsApp 2FA reminder modal — shown once per month on first login.
+// Saved in localStorage so it survives page reloads without a DB round-trip.
+const WA2FA_KEY = 'kamili_wa2fa_reminded';
+function shouldShowWa2fa() {
+  try {
+    const last = localStorage.getItem(WA2FA_KEY);
+    if (!last) return true;
+    const ms = Date.now() - Number(last);
+    return ms > 30 * 24 * 60 * 60 * 1000; // 30 days
+  } catch { return false; }
+}
+
+// D3: days until a date string; null if blank or already passed.
+function daysUntil(dateStr) {
+  if (!dateStr) return null;
+  const d = new Date(dateStr);
+  if (isNaN(d)) return null;
+  const diff = Math.ceil((d - Date.now()) / 86_400_000);
+  return diff;
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
+export default function AdminDashboard() {
+  const { user, logout, isReadOnly } = useAuth();
+  const navigate                     = useNavigate();
+
+  // ── Data state ──────────────────────────────────────────────────────────────
+  const [products,   setProducts]   = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [reviews,    setReviews]    = useState([]);
+  const [payments,   setPayments]   = useState([]);
+  const [settings,   setSettings]   = useState(BLANK_SETTINGS);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [settingsMsg,    setSettingsMsg]    = useState('');
+  const [acToast,    setAcToast]    = useState('');
+  const acToastTimer = useRef(null);
+  // D1: unread admin reminders (monthly backup prompts, etc.)
+  const [reminders,  setReminders]  = useState([]);
+  // D2: WhatsApp 2FA reminder modal
+  const [showWa2fa,  setShowWa2fa]  = useState(() => shouldShowWa2fa());
+  // D3: renewal date warnings computed from settings (re-evaluated when settings load)
+  const [expiryWarnings, setExpiryWarnings] = useState([]);
+  function showAcToast(msg) {
+    clearTimeout(acToastTimer.current);
+    setAcToast(msg);
+    acToastTimer.current = setTimeout(() => setAcToast(''), 3500);
+  }
+
+  // ── Tab / navigation state ──────────────────────────────────────────────────
+  const [activeTab,            setActiveTab]            = useState('orders');
+  // ordersKey increments on every jumpToTab('orders', filter) call so
+  // OrdersTab remounts with the new defaultFilter even if filter didn't change.
+  const [ordersKey,            setOrdersKey]            = useState(0);
+  const [ordersDefaultFilter,  setOrdersDefaultFilter]  = useState('all');
+
+  function jumpToTab(tab, filter = null) {
+    setActiveTab(tab);
+    if (tab === 'orders' && filter) {
+      setOrdersDefaultFilter(filter);
+      setOrdersKey(k => k + 1);
+    }
+  }
+
+  // ── Fetch helpers ───────────────────────────────────────────────────────────
+  async function fetchProducts() {
+    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+    if (data) setProducts(data);
+  }
+  async function fetchCategories() {
+    const { data } = await supabase.from('categories').select('*').order('created_at');
+    if (data) setCategories(data);
+  }
+  async function fetchReviews() {
+    const { data } = await supabase.from('reviews').select('*')
+      .eq('status', 'pending').order('created_at', { ascending: false });
+    if (data) setReviews(data);
+  }
+  async function fetchPayments() {
+    const { data } = await supabase.from('payments').select('*')
+      .order('created_at', { ascending: false }).limit(200);
+    if (data) setPayments(data);
+  }
+  async function fetchSettings() {
+    const { data } = await supabase.from('store_settings').select('*').eq('id', 'singleton').single();
+    if (data) {
+      setSettings({ ...BLANK_SETTINGS, ...data });
+      // D3: compute expiry warnings from renewal dates
+      const warnings = [];
+      const checks = [
+        { key: 'domain_renewal_date',  label: 'Domain' },
+        { key: 'hosting_renewal_date', label: 'Hosting' },
+        { key: 'ssl_renewal_date',     label: 'SSL cert' },
+      ];
+      for (const { key, label } of checks) {
+        const days = daysUntil(data[key]);
+        if (days !== null && days <= 30)
+          warnings.push(`${label} expires in ${days} day${days === 1 ? '' : 's'}`);
+      }
+      setExpiryWarnings(warnings);
+    }
+  }
+
+  async function fetchReminders() {
+    // D1: load unread admin reminders (inserted monthly by pg_cron)
+    const { data } = await supabase.from('admin_reminders')
+      .select('*').eq('read', false).order('created_at', { ascending: false });
+    if (data) setReminders(data);
+  }
+
+  async function dismissReminder(id) {
+    await supabase.from('admin_reminders').update({ read: true }).eq('id', id);
+    setReminders(prev => prev.filter(r => r.id !== id));
+  }
+
+  // ── WhatsApp helpers ────────────────────────────────────────────────────────
+  // Shared phone normalisation: strip non-digits, replace leading 0 with 254.
+  function normalisePhone(raw) {
+    return (raw || '').replace(/^0/, '254').replace(/\D/g, '');
+  }
+
+  // Task 1: auto thank-you sent when a payment flips to status='success'.
+  // Opens wa.me in a new tab and marks thankyou_sent=true so a reload
+  // or a second realtime event doesn't re-trigger it.
+  function sendThankYouWhatsApp(p) {
+    const clean = normalisePhone(p.phone);
+    if (!clean) return;
+    const firstName = (p.customer_name || '').split(' ')[0] || '';
+    const greeting  = firstName ? `Hi ${firstName}` : 'Hi';
+    const msg = [
+      `${greeting}! 🎉`,
+      '',
+      `Thanks for your order — we've received your payment of Ksh ${Number(p.amount).toLocaleString('en-KE')} and we're preparing your items now.`,
+      '',
+      `We'll send a dispatch confirmation once your order is on its way. 🛍️`,
+      '',
+      '— Kamili Nairobi',
+    ].join('\n');
+    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+  }
+
+  // Task 4: review-prompt message sent by admin from the Action Center.
+  async function sendReviewPromptWA(p) {
+    const clean = normalisePhone(p.phone);
+    if (!clean) return;
+    const firstName = (p.customer_name || '').split(' ')[0] || '';
+    const greeting  = firstName ? `Hi ${firstName}` : 'Hi';
+    const msg = [
+      `${greeting}! We hope you're loving your Kamili purchase 🛍️`,
+      '',
+      "We'd love to hear your thoughts — a quick review helps other customers and means a lot to us.",
+      '',
+      'You can leave a review on our website or simply reply here.',
+      '',
+      'Thank you! — Kamili Nairobi',
+    ].join('\n');
+    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+    // Optimistic update + DB write
+    setPayments(prev => prev.map(pay =>
+      pay.id === p.id ? { ...pay, review_prompt_sent: true, review_prompt_ready: false } : pay
+    ));
+    await supabase.from('payments')
+      .update({ review_prompt_sent: true, review_prompt_ready: false })
+      .eq('id', p.id);
+  }
+
+  // ── Always-on subscriptions: payments, products, reviews ───────────────────
+  useEffect(() => {
+    fetchProducts();
+    fetchReviews();
+    fetchPayments();
+    fetchSettings();
+    fetchReminders();
+
+    const prodCh = supabase.channel('adm-products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, fetchProducts)
+      .subscribe();
+    const revCh = supabase.channel('adm-reviews')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, fetchReviews)
+      .subscribe();
+
+    // Payments: INSERT just refreshes the list.
+    // UPDATE: also check for a new success event → send auto thank-you.
+    const payCh = supabase.channel('adm-payments')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' },
+        fetchPayments)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'payments' },
+        (payload) => {
+          fetchPayments();
+          const p = payload.new;
+          // Guard: only fire when this UPDATE is the transition to 'success'
+          // AND the thank-you hasn't already been sent (prevents re-trigger on reload).
+          // Guard: only send if status just became 'success' and WA not yet sent.
+          // The .eq('thankyou_sent', false) acts as an optimistic lock —
+          // only one tab wins the DB write; the other gets data=[] and skips.
+          if (p.status === 'success' && !p.thankyou_sent && p.phone) {
+            supabase.from('payments')
+              .update({ thankyou_sent: true })
+              .eq('id', p.id)
+              .eq('thankyou_sent', false) // only update if not already claimed
+              .select('id')
+              .then(({ data }) => {
+                if (data && data.length > 0) sendThankYouWhatsApp(p);
+                // If data is empty another tab already claimed it — skip silently.
+              });
+          }
+        })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(prodCh);
+      supabase.removeChannel(revCh);
+      supabase.removeChannel(payCh);
+    };
+  }, []);
+
+  // ── Per-tab subscription: categories (only when that tab is active) ─────────
+  useEffect(() => {
+    fetchCategories(); // always re-fetch when tab activates
+
+    if (activeTab !== 'categories') return; // no sub needed outside that tab
+
+    const catCh = supabase.channel('adm-categories')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'categories' }, fetchCategories)
+      .subscribe();
+    return () => supabase.removeChannel(catCh);
+  }, [activeTab]);
+
+  // ── KPI calculations (recompute only when underlying data changes) ──────────
+  const kpi = useMemo(() => {
+    const todayUTC = startOfTodayKE();
+    const weekUTC  = startOfWeekKE();
+    const paid     = payments.filter(p => p.status === 'success');
+
+    const todayRevenue = paid
+      .filter(p => new Date(p.created_at).getTime() >= todayUTC)
+      .reduce((s, p) => s + Number(p.amount || 0), 0);
+
+    const weekRevenue = paid
+      .filter(p => new Date(p.created_at).getTime() >= weekUTC)
+      .reduce((s, p) => s + Number(p.amount || 0), 0);
+
+    const pendingCount  = payments.filter(p => p.status === 'pending').length;
+    const lowStockCount = products.filter(p => p.status !== 'Pre-Order' && (p.quantity ?? 0) <= 5 && (p.quantity ?? 0) > 0).length;
+    const reviewCount   = reviews.length;
+    // C3: payments still pending in the last 24 hours — admin should reconcile or cancel these daily.
+    const yesterday     = Date.now() - 24 * 60 * 60 * 1000;
+    const reconcileCount = payments.filter(p =>
+      p.status === 'pending' && new Date(p.created_at).getTime() > yesterday
+    ).length;
+
+    return { todayRevenue, weekRevenue, pendingCount, lowStockCount, reviewCount, reconcileCount };
+  }, [payments, products, reviews]);
+
+  // ── Action Center data ──────────────────────────────────────────────────────
+  // Low stock: qty 1-5, not Pre-Order
+  const acLowStock = useMemo(() =>
+    products.filter(p => p.status !== 'Pre-Order' && (p.quantity ?? 0) > 0 && (p.quantity ?? 0) <= 5),
+  [products]);
+
+  // Stale payments: still 'pending' (not yet failed/succeeded) after 30 min.
+  // Deliberately excludes 'failed' — once the pg_cron timeout fires, it's the
+  // terminal state and re-surfacing it forever would clutter the AC.
+  const THIRTY_MIN = 30 * 60 * 1000;
+  const acStalePayments = useMemo(() =>
+    payments.filter(p =>
+      p.status === 'pending' &&
+      Date.now() - new Date(p.created_at).getTime() > THIRTY_MIN
+    ),
+  [payments]);
+
+  // Task 4: review prompts the daily cron has flagged as ready to send
+  const acReviewPrompts = useMemo(() =>
+    payments.filter(p => p.review_prompt_ready === true),
+  [payments]);
+
+  const hasActionItems = (
+    acLowStock.length > 0 ||
+    reviews.length > 0 ||
+    acStalePayments.length > 0 ||
+    acReviewPrompts.length > 0
+  );
+
+  // ── Action Center inline handlers ───────────────────────────────────────────
+  async function acAddStock(product) {
+    const newQty = (product.quantity ?? 0) + 1;
+    // Full status ladder — same logic as ProductsTab so behaviour is consistent.
+    const newStatus =
+      product.status === 'Pre-Order' ? 'Pre-Order' :
+      newQty <= 0  ? 'Out of Stock' :
+      newQty <= 10 ? 'Low Stock'    : 'Available';
+
+    const snap = products;
+    setProducts(prev => prev.map(p =>
+      p.id === product.id ? { ...p, quantity: newQty, status: newStatus } : p
+    ));
+    const { error } = await supabase.from('products')
+      .update({ quantity: newQty, status: newStatus }).eq('id', product.id);
+    if (error) {
+      setProducts(snap); // rollback
+      showAcToast(`Failed to update stock for "${product.name}" — reverted.`);
+    }
+  }
+
+  async function acApproveReview(id) {
+    await supabase.from('reviews').update({ status: 'approved' }).eq('id', id);
+    fetchReviews();
+  }
+
+  async function acDeleteReview(id) {
+    if (!window.confirm('Delete this review?')) return;
+    await supabase.from('reviews').delete().eq('id', id);
+    fetchReviews();
+  }
+
+  async function handleLogout() { await logout(); navigate('/admin/login'); }
+
+  // ── Tab definitions (badges use live data) ──────────────────────────────────
+  const TABS = [
+    { key: 'orders',     label: 'Orders',     badge: kpi.pendingCount  || null },
+    { key: 'products',   label: 'Products',   badge: kpi.lowStockCount || null },
+    { key: 'categories', label: 'Categories', badge: null                      },
+    { key: 'reviews',    label: 'Reviews',    badge: kpi.reviewCount   || null },
+    { key: 'settings',   label: 'Settings',   badge: null                      },
+  ];
+
+  // ── Render ──────────────────────────────────────────────────────────────────
+  return (
+    <div className="admin-page">
+
+      {/* 1. Topbar ─────────────────────────────────────────────────────── */}
+      <header className="admin-topbar">
+        <span className="admin-logo">Kamili Admin</span>
+        <div className="admin-topbar__right">
+          <span className="admin-email">{user?.email}</span>
+          <button className="btn btn-outline"
+            style={{ height: 36, padding: '0 16px', fontSize: 12 }}
+            onClick={handleLogout}>
+            Log out
+          </button>
+        </div>
+      </header>
+
+      {/* AC toast */}
+      {acToast && <div className="admin-toast admin-toast--error">{acToast}</div>}
+
+      {/* D2: WhatsApp 2FA monthly reminder — annoying by design, that's the point */}
+      {showWa2fa && (
+        <div className="wa2fa-overlay">
+          <div className="wa2fa-modal">
+            <h3>Security Check</h3>
+            <p>
+              Is WhatsApp 2-step verification still enabled?<br />
+              <strong>Settings → Account → Two-step verification</strong><br /><br />
+              This protects your admin WhatsApp from SIM-swap attacks.
+            </p>
+            <div className="wa2fa-actions">
+              <button className="btn btn-gold" onClick={() => {
+                try { localStorage.setItem(WA2FA_KEY, String(Date.now())); } catch {}
+                setShowWa2fa(false);
+              }}>Yes, it's enabled</button>
+              <button className="btn btn-outline" onClick={() => {
+                const tomorrow = Date.now() - (29 * 24 * 60 * 60 * 1000); // 1 day from 30d window
+                try { localStorage.setItem(WA2FA_KEY, String(tomorrow)); } catch {}
+                setShowWa2fa(false);
+              }}>Remind me tomorrow</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* D3: expiry warnings */}
+      {expiryWarnings.length > 0 && (
+        <div className="container" style={{ paddingTop: 16 }}>
+          {expiryWarnings.map(w => (
+            <div key={w} className="expiry-banner">⚠️ {w} — renew in Settings tab to dismiss</div>
+          ))}
+        </div>
+      )}
+
+      {/* D1: unread admin reminders (monthly backup prompts) */}
+      {reminders.length > 0 && (
+        <div className="container" style={{ paddingTop: expiryWarnings.length ? 0 : 16 }}>
+          {reminders.map(r => (
+            <div key={r.id} className="reminder-banner">
+              <span>📋 {r.message}</span>
+              <button className="reminder-banner__dismiss"
+                onClick={() => dismissReminder(r.id)} title="Mark as read">✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* 2. KPI Strip ──────────────────────────────────────────────────── */}
+      <div className="kpi-strip">
+        <div className="container kpi-strip__inner">
+
+          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'success')}>
+            <span className="kpi-card__label">Today's Revenue</span>
+            <span className="kpi-card__value">{fmt(kpi.todayRevenue)}</span>
+            <span className="kpi-card__sub">Kenya time</span>
+          </button>
+
+          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'success')}>
+            <span className="kpi-card__label">This Week</span>
+            <span className="kpi-card__value">{fmt(kpi.weekRevenue)}</span>
+            <span className="kpi-card__sub">Mon – today</span>
+          </button>
+
+          <button className="kpi-card"
+            style={kpi.pendingCount > 0 ? { borderColor: 'rgba(251,191,36,0.35)' } : {}}
+            onClick={() => jumpToTab('orders', 'pending')}>
+            <span className="kpi-card__label">Pending Orders</span>
+            <span className="kpi-card__value"
+              style={{ color: kpi.pendingCount > 0 ? '#fbbf24' : 'var(--gold)' }}>
+              {kpi.pendingCount}
+            </span>
+            <span className="kpi-card__sub">awaiting M-Pesa</span>
+          </button>
+
+          <button className="kpi-card"
+            style={kpi.lowStockCount > 0 ? { borderColor: 'rgba(239,68,68,0.35)' } : {}}
+            onClick={() => jumpToTab('products')}>
+            <span className="kpi-card__label">Low Stock</span>
+            <span className="kpi-card__value"
+              style={{ color: kpi.lowStockCount > 0 ? '#f87171' : 'var(--gold)' }}>
+              {kpi.lowStockCount}
+            </span>
+            <span className="kpi-card__sub">≤ 5 units left</span>
+          </button>
+
+          <button className="kpi-card"
+            style={kpi.reviewCount > 0 ? { borderColor: 'rgba(220,20,60,0.35)' } : {}}
+            onClick={() => jumpToTab('reviews')}>
+            <span className="kpi-card__label">Pending Reviews</span>
+            <span className="kpi-card__value">{kpi.reviewCount}</span>
+            <span className="kpi-card__sub">need approval</span>
+          </button>
+
+          {/* C3: daily reconciliation prompt — click to filter Orders to pending from last 24h */}
+          <button className="kpi-card kpi-card--reconcile"
+            style={kpi.reconcileCount > 0 ? { borderColor: 'rgba(251,191,36,0.4)' } : {}}
+            onClick={() => jumpToTab('orders', 'pending')}>
+            <span className="kpi-card__label">Reconcile</span>
+            <span className="kpi-card__value"
+              style={{ color: kpi.reconcileCount > 0 ? '#fbbf24' : 'var(--gold)' }}>
+              {kpi.reconcileCount}
+            </span>
+            <span className="kpi-card__sub">pending last 24h</span>
+          </button>
+
+        </div>
+      </div>
+
+      {/* 3. Action Center — only renders when something needs attention ── */}
+      {hasActionItems && (
+        <div className="action-center">
+          <div className="container">
+
+            {/* Low stock: one row per product, inline +1 button */}
+            {acLowStock.length > 0 && (
+              <div className="ac-section">
+                <span className="ac-section__label">Low Stock</span>
+                {acLowStock.map(p => (
+                  <div key={p.id} className="ac-row">
+                    <span className="ac-row__name">{p.name}</span>
+                    <span className="ac-row__qty ac-row__qty--warn">{p.quantity} left</span>
+                    <button className="ac-btn ac-btn--stock"
+                      onClick={() => acAddStock(p)}
+                      title="Add 1 unit to stock">
+                      +1 stock
+                    </button>
+                    <button className="ac-btn ac-btn--link"
+                      onClick={() => jumpToTab('products')}>
+                      View all →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Pending reviews: inline approve / delete */}
+            {reviews.length > 0 && (
+              <div className="ac-section">
+                <span className="ac-section__label">Pending Reviews</span>
+                {reviews.map(r => (
+                  <div key={r.id} className="ac-row">
+                    <span className="ac-row__stars">{'★'.repeat(r.rating)}</span>
+                    <span className="ac-row__name">{r.name || 'Anonymous'}</span>
+                    <span className="ac-row__snippet">"{r.text?.slice(0, 60)}{r.text?.length > 60 ? '…' : ''}"</span>
+                    <button className="ac-btn ac-btn--approve"
+                      onClick={() => acApproveReview(r.id)}>
+                      ✓ Approve
+                    </button>
+                    <button className="ac-btn ac-btn--delete"
+                      onClick={() => acDeleteReview(r.id)}>
+                      Delete
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Stale payments: just surfaced, no one-click action */}
+            {acStalePayments.length > 0 && (
+              <div className="ac-section">
+                <span className="ac-section__label">Stale Payments</span>
+                {acStalePayments.map(p => (
+                  <div key={p.id} className="ac-row">
+                    <span className={`ac-status-dot ac-status-dot--${p.status}`} />
+                    <span className="ac-row__name">{p.customer_name || 'Unknown'}</span>
+                    <span className="ac-row__amount">{fmt(p.amount)}</span>
+                    <span className="ac-row__qty ac-row__qty--warn">
+                      {p.status} · {Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000)} min ago
+                    </span>
+                    <button className="ac-btn ac-btn--link"
+                      onClick={() => jumpToTab('orders', p.status)}>
+                      View →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Task 4: review prompts flagged by the daily cron */}
+            {acReviewPrompts.length > 0 && (
+              <div className="ac-section">
+                <span className="ac-section__label">Review Prompts</span>
+                {acReviewPrompts.map(p => (
+                  <div key={p.id} className="ac-row">
+                    <span className="ac-row__name">{p.customer_name || 'Customer'}</span>
+                    <span className="ac-row__qty" style={{ color: 'var(--muted)' }}>
+                      dispatched {Math.round((Date.now() - new Date(p.dispatched_at).getTime()) / 86400000)}d ago
+                    </span>
+                    <span className="ac-row__amount">{fmt(p.amount)}</span>
+                    <button className="ac-btn ac-btn--approve"
+                      onClick={() => sendReviewPromptWA(p)}>
+                      Send review request →
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
+        </div>
+      )}
+
+      {/* 4. Tab Bar ────────────────────────────────────────────────────── */}
+      <div className="admin-tabs-bar">
+        <div className="container admin-tabs-bar__inner">
+          {TABS.map(t => (
+            <button key={t.key}
+              className={`admin-tab-btn${activeTab === t.key ? ' active' : ''}`}
+              onClick={() => setActiveTab(t.key)}>
+              {t.label}
+              {t.badge ? <span className="admin-tab-badge">{t.badge}</span> : null}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Active tab content ─────────────────────────────────────────── */}
+      <div className="admin-body container">
+        <Suspense fallback={<div className="tab-loading">Loading…</div>}>
+
+          {activeTab === 'orders' && (
+            <OrdersTab
+              key={ordersKey}
+              payments={payments}
+              defaultFilter={ordersDefaultFilter}
+              isReadOnly={isReadOnly}
+            />
+          )}
+
+          {activeTab === 'products' && (
+            <ProductsTab
+              products={products}
+              categories={categories}
+              setProducts={setProducts}
+            />
+          )}
+
+          {activeTab === 'categories' && (
+            <CategoriesTab
+              categories={categories}
+              products={products}
+              refetch={fetchCategories}
+            />
+          )}
+
+          {activeTab === 'reviews' && (
+            <ReviewsTab
+              reviews={reviews}
+              refetch={fetchReviews}
+            />
+          )}
+
+          {activeTab === 'settings' && (
+            <SettingsTab
+              settings={settings}
+              setSettings={setSettings}
+              saving={settingsSaving}
+              setSaving={setSettingsSaving}
+              msg={settingsMsg}
+              setMsg={setSettingsMsg}
+              user={user}
+              onLogout={handleLogout}
+            />
+          )}
+
+        </Suspense>
+      </div>
+
+    </div>
+  );
+}

@@ -1,0 +1,30 @@
+.category-page { padding-top: 68px; min-height: 100vh; }
+
+.cat-hero {
+  padding: 64px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 40px;
+}
+.cat-hero__title {
+  font-family: var(--font-head);
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  font-weight: 600; color: var(--text);
+  margin-bottom: 6px;
+}
+.cat-hero__count { font-size: 13px; color: var(--muted); }
+
+.cat-filters {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 32px;
+}
+.filter-chip {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 7px 16px; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.filter-chip:hover { border-color: var(--border2); color: var(--text); }
+.filter-chip--active { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }

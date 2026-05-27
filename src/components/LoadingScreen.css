@@ -1,0 +1,44 @@
+.ls {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #040404;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ls__eyebrow {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+.ls__logo {
+  font-family: var(--font-head);
+  font-size: clamp(3rem, 8vw, 6rem);
+  font-weight: 300;
+  letter-spacing: 0.35em;
+  color: var(--text);
+  line-height: 1;
+}
+
+.ls__line-wrap {
+  width: 160px;
+  height: 1px;
+  overflow: hidden;
+  margin-top: 20px;
+}
+
+.ls__line {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, transparent, var(--gold), transparent);
+  transform-origin: left center;
+}
