@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../lib/supabase';
-import { handleImgSelect, uploadImage } from '../../lib/imageUpload';
+import { handleImgSelect, uploadImage, removeBackground } from '../../lib/imageUpload';
 import { STATUSES, BLANK_PRODUCT, statusFromQty, fmt } from '../../lib/adminUtils';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -240,6 +240,11 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
   const [imgInfo,  setImgInfo]  = useState('');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
+  // On by default — "every photo I post" gets the white-stage/3D treatment
+  // unless the admin explicitly turns it off for a shot that shouldn't have
+  // its background touched (already-styled flat-lay, a graphic, etc).
+  const [removeBg,   setRemoveBg]   = useState(true);
+  const [bgStatus,   setBgStatus]   = useState('');   // progress text while processing
   const fileRef = useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -255,7 +260,25 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
     setSaving(true);
     try {
       let image_url = null;
-      if (imgFile) image_url = await uploadImage(imgFile, 'products');
+      if (imgFile && removeBg) {
+        // Background removal is a local, on-device step (nothing leaves the
+        // browser) — but it can take real time on a first use (the model
+        // downloads once, then is cached). If it fails for any reason, fall
+        // back to the original photo rather than block adding the product —
+        // a plain photo beats no product at all.
+        try {
+          setBgStatus('Removing background… 0%');
+          const cutout = await removeBackground(imgFile, pct => setBgStatus(`Removing background… ${pct}%`));
+          setBgStatus('Background removed ✓ uploading…');
+          image_url = await uploadImage(cutout, 'products', { isCutout: true });
+        } catch (bgErr) {
+          console.warn('[background removal]', bgErr.message);
+          setBgStatus('Background removal failed — uploading original photo instead.');
+          image_url = await uploadImage(imgFile, 'products');
+        }
+      } else if (imgFile) {
+        image_url = await uploadImage(imgFile, 'products');
+      }
       const qty = form.quantity === '' ? null : Number(form.quantity);
       const status = form.status === 'Available' || form.status === 'Low Stock'
         ? statusFromQty(qty ?? 999)
@@ -302,6 +325,21 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
               onChange={e => handleImgSelect(e, {
                 onFile: setImgFile, onPreview: setPreview, onInfo: setImgInfo, onError: setError,
               })} />
+
+            {imgFile && (
+              <label className="bg-removal-toggle">
+                <input type="checkbox" checked={removeBg}
+                  onChange={e => setRemoveBg(e.target.checked)} disabled={saving} />
+                <span>
+                  Remove background &amp; apply the white-stage look
+                  <span className="form-hint" style={{ marginTop: 2 }}>
+                    Runs in your browser, takes a few seconds. Turn off for a photo
+                    that's already styled the way you want it.
+                  </span>
+                </span>
+              </label>
+            )}
+            {bgStatus && <p className="form-hint" style={{ color: 'var(--gold)' }}>{bgStatus}</p>}
           </div>
 
           <div className="pf-row">

@@ -41,10 +41,52 @@ export function handleImgSelect(e, { onFile, onPreview, onInfo, onError }) {
   onInfo?.(`${sizeMB.toFixed(1)} MB`);
 }
 
+// ── Background removal ────────────────────────────────────────────────────
+// Runs entirely in the admin's browser (nothing is sent to a third-party
+// service) — a WASM model (~40-80MB) downloads on first use and is cached
+// by the browser after that. Dynamically imported so the ~2MB JS library
+// itself never loads for a customer, or even for the admin until this
+// function actually runs.
+//
+// Returns a new File: a transparent PNG. Never throws for a "no background
+// found" case — imgly still returns *something* — but network/model-load
+// failures do throw, so callers should let the customer/admin fall back to
+// the original photo rather than block the whole upload on this.
+export async function removeBackground(file, onProgress) {
+  const mod = await import('@imgly/background-removal');
+  // Export shape varies by how the bundler interops this package's build —
+  // fall back through every shape actually seen rather than assuming one.
+  const imglyRemoveBackground = mod.default ?? mod.removeBackground ?? mod;
+  if (typeof imglyRemoveBackground !== 'function') {
+    throw new Error('Could not load the background-removal library (unexpected module shape).');
+  }
+  const blob = await imglyRemoveBackground(file, {
+    model: 'medium',
+    output: { format: 'image/png', quality: 1 },
+    progress: (key, current, total) => {
+      // imgly reports progress per internal step (model fetch, then
+      // inference) rather than one 0-100 stream — collapse it to a single
+      // percent so the UI has one number to show.
+      if (total > 0) onProgress?.(Math.round((current / total) * 100));
+    },
+  });
+  const name = file.name.replace(/\.\w+$/, '') + '-cutout.png';
+  return new File([blob], name, { type: 'image/png' });
+}
+
 // Compress then upload to Supabase Storage bucket "images".
 // onProgress(0-100) and onInfo(string) are optional callbacks for UI feedback.
 // Returns the public CDN URL string. Throws on upload failure.
-export async function uploadImage(file, folder = 'products', { onProgress, onInfo } = {}) {
+//
+// isCutout: true when `file` is a background-removed transparent PNG.
+// Two things change: compression must NOT re-encode to JPEG (JPEG has no
+// alpha channel — a cutout saved as JPEG comes back with a solid black
+// background, silently destroying the whole point of removing it), and the
+// storage path goes under 'products-cutout/' rather than the plain folder
+// — ProductCard reads that path to apply the white-stage + drop-shadow
+// treatment, so this is what turns a processed photo into the "3D" look
+// automatically, with no separate admin step.
+export async function uploadImage(file, folder = 'products', { onProgress, onInfo, isCutout = false } = {}) {
   const originalMB = (file.size / 1024 / 1024).toFixed(1);
 
   let compressed = file;
@@ -55,7 +97,7 @@ export async function uploadImage(file, folder = 'products', { onProgress, onInf
       useWebWorker:     true,
       // 0-60% of progress bar = compression phase
       onProgress:       pct => onProgress?.(Math.round(pct * 0.6)),
-      fileType:         'image/jpeg',
+      fileType:         isCutout ? 'image/png' : 'image/jpeg',
     });
     const compMB = (compressed.size / 1024 / 1024).toFixed(1);
     onInfo?.(`${originalMB} MB → ${compMB} MB ✓`);
@@ -64,11 +106,13 @@ export async function uploadImage(file, folder = 'products', { onProgress, onInf
   }
 
   onProgress?.(65);
-  const path = `${folder}/${Date.now()}.jpg`;
+  const ext  = isCutout ? 'png' : 'jpg';
+  const dir  = isCutout ? `${folder}-cutout` : folder;
+  const path = `${dir}/${Date.now()}.${ext}`;
 
   const { error } = await supabase.storage
     .from('images')
-    .upload(path, compressed, { upsert: false, contentType: 'image/jpeg' });
+    .upload(path, compressed, { upsert: false, contentType: isCutout ? 'image/png' : 'image/jpeg' });
 
   onProgress?.(95);
   if (error) throw new Error(friendlyStorageError(error.message));

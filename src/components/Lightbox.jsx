@@ -40,7 +40,11 @@ export default function Lightbox({ product, onClose, onPrev, onNext, hasPrev, ha
           transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}>
 
           {/* Image */}
-          <div className="lb-img-wrap">
+          {/* Same isCutout check as ProductCard — without it, a transparent
+              cutout PNG rendered here with object-fit:cover on the dark
+              modal background looked exactly like a cardboard cutout: hard
+              JPEG-style crop, no stage, no shadow. */}
+          <div className={`lb-img-wrap${product.image_url?.includes('/products-cutout/') ? ' lb-img-wrap--cutout' : ''}`}>
             {product.image_url
               ? <img src={product.image_url} alt={product.name} className="lb-img" />
               : <div className="lb-img-placeholder" />}

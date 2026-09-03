@@ -100,6 +100,18 @@
 }
 .img-upload__placeholder small { font-size: 11px; color: var(--muted2); }
 
+/* ── Background-removal toggle ───────────────────────────────────────── */
+.bg-removal-toggle {
+  display: flex; align-items: flex-start; gap: 10px;
+  margin-top: 10px; padding: 10px 12px;
+  background: var(--surface2); border: 1px solid var(--border);
+  cursor: pointer; font-size: 13px; color: var(--text);
+}
+.bg-removal-toggle input[type="checkbox"] {
+  width: 16px; height: 16px; margin-top: 2px; flex: none; cursor: pointer;
+}
+.bg-removal-toggle .form-hint { text-transform: none; letter-spacing: 0; color: var(--muted); }
+
 /* ── Upload progress ─────────────────────────────────────────────────── */
 .upload-info {
   font-size: 11px; color: var(--gold); margin-top: 6px; letter-spacing: 0.05em;
