@@ -68,7 +68,25 @@
 /* Content */
 .hero__content {
   position: relative; z-index: 3; will-change: transform, opacity;
-  max-width: 800px;
+  max-width: 1280px; width: 100%;
+}
+
+/* Two-column layout: copy left, animated showcase right. */
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 56px;
+}
+.hero__text { max-width: 640px; }
+
+@media (max-width: 1024px) {
+  /* Showcase drops out entirely rather than stacking below the fold —
+     see the comment on hero__showcase-col in Home.jsx: it's a nice-to-have
+     on a spacious viewport, not worth pushing real CTAs down a phone
+     screen for. */
+  .hero__grid { grid-template-columns: 1fr; }
+  .hero__showcase-col { display: none; }
 }
 .hero__accent-line {
   width: 56px; height: 1px;

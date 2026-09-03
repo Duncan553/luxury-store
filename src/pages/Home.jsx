@@ -6,6 +6,7 @@ import Tilt from 'react-parallax-tilt';
 import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import Lightbox from '../components/Lightbox';
+import HeroShowcase from '../components/HeroShowcase';
 import { useSeo } from '../lib/seo';
 import './Home.css';
 
@@ -160,57 +161,71 @@ export default function Home() {
         </div>
 
         <motion.div className="hero__content container" style={{ y: heroY, opacity: heroOp }}>
-          <motion.div className="hero__accent-line"
-            initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
-            transition={{ duration: 1.4, ease: [0.76, 0, 0.24, 1], delay: 0.3 }} />
+          <div className="hero__grid">
+            <div className="hero__text">
+              <motion.div className="hero__accent-line"
+                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                transition={{ duration: 1.4, ease: [0.76, 0, 0.24, 1], delay: 0.3 }} />
 
-          <motion.span className="hero__eyebrow"
-            initial={{ opacity: 0, letterSpacing: '0.6em' }}
-            animate={{ opacity: 1, letterSpacing: '0.3em' }}
-            transition={{ duration: 1.1, ease, delay: 0.5 }}>
-            Nairobi · Est. 2024
-          </motion.span>
+              <motion.span className="hero__eyebrow"
+                initial={{ opacity: 0, letterSpacing: '0.6em' }}
+                animate={{ opacity: 1, letterSpacing: '0.3em' }}
+                transition={{ duration: 1.1, ease, delay: 0.5 }}>
+                Nairobi · Est. 2024
+              </motion.span>
 
-          <div className="hero__heading-wrap">
-            <motion.h1 className="hero__heading"
-              initial={{ opacity: 0, y: 60, skewY: 3 }}
-              animate={{ opacity: 1, y: 0, skewY: 0 }}
-              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}>
-              Quiet<br /><em>Luxury.</em>
-            </motion.h1>
-            {/* Second line is part of the same visual headline, so it must not
-                be a second <h1> — styling comes from the class, not the tag. */}
-            <motion.div className="hero__heading hero__heading--outline"
-              initial={{ opacity: 0, y: 60, skewY: 3 }}
-              animate={{ opacity: 1, y: 0, skewY: 0 }}
-              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.85 }}>
-              Undeniable<br />Presence.
+              <div className="hero__heading-wrap">
+                <motion.h1 className="hero__heading"
+                  initial={{ opacity: 0, y: 60, skewY: 3 }}
+                  animate={{ opacity: 1, y: 0, skewY: 0 }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}>
+                  Quiet<br /><em>Luxury.</em>
+                </motion.h1>
+                {/* Second line is part of the same visual headline, so it must not
+                    be a second <h1> — styling comes from the class, not the tag. */}
+                <motion.div className="hero__heading hero__heading--outline"
+                  initial={{ opacity: 0, y: 60, skewY: 3 }}
+                  animate={{ opacity: 1, y: 0, skewY: 0 }}
+                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.85 }}>
+                  Undeniable<br />Presence.
+                </motion.div>
+              </div>
+
+              <motion.p className="hero__sub"
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, ease, delay: 1.2 }}>
+                Handpicked bags, jewelry &amp; watches<br />for those who need no introduction.
+              </motion.p>
+
+              {/* The hero art sells the feeling; this line sells the search term.
+                  "Quiet Luxury" is not something anyone types into Google. */}
+              <motion.h2 className="hero__seo-line"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                transition={{ duration: 0.8, ease, delay: 0.6 }}>
+                Designer bags, jewellery &amp; watches in Nairobi — delivered across Kenya
+              </motion.h2>
+
+              <motion.div className="hero__ctas"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease, delay: 1.45 }}>
+                <MagBtn to={categories[0] ? `/category/${categories[0].slug}` : '/category/bags'}
+                  className="btn hero__btn-primary">Shop Now</MagBtn>
+                <MagBtn to="/about" className="btn btn-outline hero__btn-ghost">Our Story</MagBtn>
+              </motion.div>
+            </div>
+
+            {/* Hidden on small screens (see Home.css) — the animated gradient
+                stage is a nice-to-have on a spacious viewport, not something
+                worth pushing the real CTAs further down a phone screen for. */}
+            <motion.div className="hero__showcase-col"
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.9, ease, delay: 0.5 }}>
+              <HeroShowcase />
             </motion.div>
           </div>
-
-          <motion.p className="hero__sub"
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease, delay: 1.2 }}>
-            Handpicked bags, jewelry &amp; watches<br />for those who need no introduction.
-          </motion.p>
-
-          {/* The hero art sells the feeling; this line sells the search term.
-              "Quiet Luxury" is not something anyone types into Google. */}
-          <motion.h2 className="hero__seo-line"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, ease, delay: 0.6 }}>
-            Designer bags, jewellery &amp; watches in Nairobi — delivered across Kenya
-          </motion.h2>
-
-          <motion.div className="hero__ctas"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease, delay: 1.45 }}>
-            <MagBtn to={categories[0] ? `/category/${categories[0].slug}` : '/category/bags'}
-              className="btn hero__btn-primary">Shop Now</MagBtn>
-            <MagBtn to="/about" className="btn btn-outline hero__btn-ghost">Our Story</MagBtn>
-          </motion.div>
         </motion.div>
 
         <motion.div className="hero__scroll-indicator"
