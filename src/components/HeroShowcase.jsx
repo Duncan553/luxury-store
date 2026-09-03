@@ -1,25 +1,26 @@
 // HeroShowcase.jsx — the hero's right-hand panel: an animated gradient
-// stage with a floating, background-removed product cutout, switchable
-// between Bags / Jewelry / Watches.
+// stage with the product image auto-cycling through Bags / Jewelry /
+// Watches on its own, so there's real, continuous, visible movement
+// without needing a click. A manual tap on a tab jumps straight there and
+// restarts the timer from that point, rather than fighting what the
+// visitor just chose to look at.
 //
-// Technique note (researched before building, not guessed at): the
-// animated background is a single oversized (300%) linear-gradient whose
-// background-position is animated back and forth. That's deliberate —
-// animating background-position is close to the cheapest thing you can
-// animate in CSS (GPU-composited, no layout/paint per frame), versus
-// animating gradient color stops or filters, which forces a much more
-// expensive repaint on every frame. Matters here because this plays
-// continuously for as long as the hero is on screen.
+// This replaces an earlier version that used Spline (spline.design) for a
+// subtle animated 3D layer behind the image. Cut it: the effect was too
+// faint to read as "moving" even when it loaded, and it added real weight
+// (1MB+ gzip) for something that wasn't landing. This auto-cycle is what
+// was actually asked for — the product image itself visibly changing —
+// and it costs nothing extra: same images, same framer-motion crossfade
+// that was already here, just on a timer instead of click-only.
 //
-// The floating-product look reuses the exact same idea as ProductCard's
-// cutout treatment — filter: drop-shadow() tracing the real alpha
-// silhouette (not box-shadow, which would draw a shadow around the
-// invisible rectangle of a transparent PNG) — just scaled up for hero
-// prominence.
-import { useState } from 'react';
+// Technique note on the background: a single oversized (300%) linear-
+// gradient with its background-position animated back and forth.
+// Animating background-position is close to the cheapest thing you can
+// animate in CSS (GPU-composited, no layout/paint per frame) — matters
+// here because it plays continuously for as long as the hero is on screen.
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import SplineHeroLayer from './SplineHeroLayer';
 import './HeroShowcase.css';
 
 const ITEMS = [
@@ -27,7 +28,7 @@ const ITEMS = [
     key: 'bags',
     label: 'Bags',
     slug: 'bags',
-    img: 'https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/products-cutout/lui23-1788447766050.png',
+    img: 'https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/products-cutout/driorvoyage-1788451857421.png',
   },
   {
     key: 'jewelry',
@@ -46,18 +47,37 @@ const ITEMS = [
   },
 ];
 
+const CYCLE_MS = 3500;
+
 export default function HeroShowcase() {
-  const [active, setActive] = useState('bags');
+  const [activeIdx, setActiveIdx] = useState(0);
   const reduce = useReducedMotion();
-  const current = ITEMS.find(i => i.key === active);
+  const current = ITEMS[activeIdx];
+  const timerRef = useRef(null);
+
+  const restartTimer = useCallback(() => {
+    clearInterval(timerRef.current);
+    // Reduced-motion visitors still get the switcher — they just don't get
+    // images changing out from under them on a timer they didn't ask for.
+    if (reduce) return;
+    timerRef.current = setInterval(() => {
+      setActiveIdx(i => (i + 1) % ITEMS.length);
+    }, CYCLE_MS);
+  }, [reduce]);
+
+  useEffect(() => {
+    restartTimer();
+    return () => clearInterval(timerRef.current);
+  }, [restartTimer]);
+
+  function selectTab(idx) {
+    setActiveIdx(idx);
+    restartTimer();   // a manual pick shouldn't get overridden a second later
+  }
 
   return (
     <div className="hshow">
       <div className="hshow__stage">
-        {/* Behind the product image, in front of the CSS gradient. Renders
-            null until the browser's idle after the real page has painted —
-            see SplineHeroLayer.jsx for why and how. */}
-        <SplineHeroLayer />
         <AnimatePresence mode="wait">
           <motion.img
             key={current.key}
@@ -73,13 +93,13 @@ export default function HeroShowcase() {
       </div>
 
       <div className="hshow__switcher" role="tablist" aria-label="Preview a category">
-        {ITEMS.map(item => (
+        {ITEMS.map((item, i) => (
           <button
             key={item.key}
             role="tab"
-            aria-selected={active === item.key}
-            className={`hshow__tab${active === item.key ? ' hshow__tab--active' : ''}`}
-            onClick={() => setActive(item.key)}
+            aria-selected={activeIdx === i}
+            className={`hshow__tab${activeIdx === i ? ' hshow__tab--active' : ''}`}
+            onClick={() => selectTab(i)}
           >
             {item.label}
           </button>
