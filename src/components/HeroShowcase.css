@@ -41,6 +41,17 @@
   .hshow__stage { animation: none; background-position: 30% 40%; }
 }
 
+/* Spline's canvas sits behind the product photo, on top of the CSS
+   gradient. Fully transparent stage background from Spline itself (set
+   in the scene's export settings) so the gradient shows through wherever
+   the 3D scene doesn't draw. */
+.hshow__spline {
+  position: absolute; inset: 0;
+  opacity: 0.55;               /* ambient, not competing with the product */
+  pointer-events: none;        /* clicks pass through to the switcher/CTA below */
+}
+.hshow__spline canvas { width: 100% !important; height: 100% !important; }
+
 .hshow__img {
   position: absolute;
   inset: 0;

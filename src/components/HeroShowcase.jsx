@@ -19,6 +19,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import SplineHeroLayer from './SplineHeroLayer';
 import './HeroShowcase.css';
 
 const ITEMS = [
@@ -53,6 +54,10 @@ export default function HeroShowcase() {
   return (
     <div className="hshow">
       <div className="hshow__stage">
+        {/* Behind the product image, in front of the CSS gradient. Renders
+            null until the browser's idle after the real page has painted —
+            see SplineHeroLayer.jsx for why and how. */}
+        <SplineHeroLayer />
         <AnimatePresence mode="wait">
           <motion.img
             key={current.key}
