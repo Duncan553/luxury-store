@@ -6,7 +6,6 @@ import Tilt from 'react-parallax-tilt';
 import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import Lightbox from '../components/Lightbox';
-import Marquee from '../components/Marquee';
 import { useSeo } from '../lib/seo';
 import './Home.css';
 
@@ -84,6 +83,11 @@ export default function Home() {
   const [preorders,        setPreorders]        = useState([]);
   const [loading,          setLoading]          = useState(true);
   const [lbIndex,          setLbIndex]          = useState(null);
+  // Real, live count of what's actually in stock right now — shown in the
+  // stats strip below instead of a hard-coded number. See the fetch below:
+  // { count: 'exact', head: true } asks Postgres for a row count without
+  // pulling any rows back, so this costs nothing extra to keep truthful.
+  const [productCount,     setProductCount]     = useState(null);
   // C2: vacation mode — fetched via CartContext (already fetches store_settings on mount)
   const { vacationMode, vacationMessage } = useCart();
 
@@ -120,6 +124,11 @@ export default function Home() {
       .order('created_at', { ascending: false })
       .limit(5)
       .then(({ data }) => { if (data) setPreorders(data); setLoading(false); });
+    // Live stock count for the stats strip — was previously a hard-coded
+    // "500+" nobody could verify against the real catalogue.
+    supabase.from('products').select('id', { count: 'exact', head: true })
+      .neq('status', 'Out of Stock')
+      .then(({ count }) => { if (typeof count === 'number') setProductCount(count); });
   }, []);
 
   return (
@@ -217,9 +226,6 @@ export default function Home() {
         <div className="hero__corner hero__corner--br" />
       </section>
 
-      {/* ═══ MARQUEE ════════════════════════════════════════════════════ */}
-      <Marquee />
-
       {/* ═══ CATEGORIES ═════════════════════════════════════════════════ */}
       {categories.length > 0 && (
         <section className="cat-section">
@@ -252,9 +258,6 @@ export default function Home() {
         </section>
       )}
 
-      {/* ═══ GOLD MARQUEE ════════════════════════════════════════════════ */}
-      <Marquee inverted />
-
       {/* ═══ EDITORIAL SPLIT ════════════════════════════════════════════ */}
       <section className="editorial section">
         <div className="container editorial__inner">
@@ -269,8 +272,19 @@ export default function Home() {
               selected — held to a standard where craftsmanship meets
               African identity.
             </p>
+            {/* Both numbers are live, not written-in: productCount comes from
+                an exact DB count (see the fetch above), categories.length
+                from the categories already loaded for the nav above. The
+                old version hard-coded "500+ Pieces Curated" and "100%
+                Personal Touch" — numbers nobody could check against the
+                real catalogue. A stat that isn't true is worse than no
+                stat: the first mismatch a visitor notices, they stop
+                trusting the rest of the page too. */}
             <div className="editorial__stats">
-              {[['500+', 'Pieces Curated'], ['3', 'Collections'], ['100%', 'Personal Touch']].map(([n, l]) => (
+              {[
+                [productCount !== null ? productCount : '—', 'In Stock Now'],
+                [categories.length || '—', categories.length === 1 ? 'Collection' : 'Collections'],
+              ].map(([n, l]) => (
                 <div key={l} className="editorial__stat">
                   <span className="editorial__stat-num">{n}</span>
                   <span className="editorial__stat-label">{l}</span>

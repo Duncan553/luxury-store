@@ -36,14 +36,6 @@ function ReviewCard({ review }) {
   );
 }
 
-/* ── Stats ────────────────────────────────────────────────────────── */
-const STATS = [
-  { value: '$31B',  label: 'Africa\'s fashion industry value', sub: 'and rising' },
-  { value: '3,000+', label: 'African designers', sub: 'gaining global recognition' },
-  { value: '54',    label: 'Countries', sub: 'one design identity' },
-  { value: '2050',  label: 'The decade Africa leads', sub: 'the global creative economy' },
-];
-
 /* ── Collection spotlights ─────────────────────────────────────────── */
 const COLLECTIONS = [
   {
@@ -69,46 +61,6 @@ const COLLECTIONS = [
     img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80',
     tag: 'Jewellery · Craft',
     align: 'right',
-  },
-];
-
-/* ── Brands ───────────────────────────────────────────────────────── */
-const BRANDS = [
-  {
-    name: 'Maxhosa Africa',
-    origin: 'Johannesburg, South Africa',
-    note: 'Xhosa-inspired knitwear worn by Beyoncé and stocked at Selfridges. Redefining what luxury knitwear looks like.',
-    tag: 'Knitwear · Heritage',
-  },
-  {
-    name: 'Thebe Magugu',
-    origin: 'South Africa',
-    note: 'LVMH Prize 2019 winner. Garments that carry political memory and African femininity in equal measure.',
-    tag: 'Womenswear · Award-Winning',
-  },
-  {
-    name: 'Studio 189',
-    origin: 'Accra, Ghana',
-    note: 'Co-founded by Rosario Dawson. Handcrafted using traditional Ghanaian batik, adinkra, and kente techniques.',
-    tag: 'Ethical · Handcraft',
-  },
-  {
-    name: 'Adele Dejak',
-    origin: 'Nairobi, Kenya',
-    note: 'Our own. Bold East African statement jewelry using brass, bone, and natural materials. Stocked in 22 countries.',
-    tag: 'Jewellery · East African',
-  },
-  {
-    name: 'Christie Brown',
-    origin: 'Accra, Ghana',
-    note: 'Blending Ghanaian craftsmanship with contemporary silhouettes. A permanent fixture at Africa Fashion Week London.',
-    tag: 'Ready-to-Wear · Accra',
-  },
-  {
-    name: 'Rich Mnisi',
-    origin: 'Johannesburg, South Africa',
-    note: 'Storytelling through pattern. His work references Tsonga mythology and has appeared in Vogue, Time, and Forbes.',
-    tag: 'Design · Storytelling',
   },
 ];
 
@@ -234,101 +186,18 @@ export default function About() {
         </div>
       </section>
 
-      <div className="divider container" />
-
-      {/* ── Stat facts ────────────────────────────────────────────────── */}
-      <section className="section-sm">
-        <div className="container">
-          <p className="section-eyebrow reveal">African Design, By the Numbers</p>
-          <h2 className="section-title reveal" style={{ marginBottom: 48 }}>
-            The Numbers Don't Lie
-          </h2>
-          <div className="about-stats reveal">
-            {STATS.map((s) => (
-              <div key={s.value} className="about-stat">
-                <span className="about-stat__value">{s.value}</span>
-                <span className="about-stat__label">{s.label}</span>
-                <span className="about-stat__sub">{s.sub}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div className="divider container" />
-
-      {/* ── The Renaissance editorial ──────────────────────────────────── */}
-      <section className="section about-renaissance">
-        <div className="container">
-          <div className="about-renaissance__inner">
-            <div className="about-renaissance__img-col reveal">
-              <div className="about-img-placeholder about-img-placeholder--tall">
-                <img
-                  src="https://plus.unsplash.com/premium_photo-1724862979245-71e659b98366?auto=format&fit=crop&w=800&q=80"
-                  alt="Black handbag with gold hardware"
-                  className="img-cover"
-                />
-              </div>
-              <div className="about-img-placeholder about-img-placeholder--square reveal reveal-delay-1">
-                <img
-                  src="https://images.unsplash.com/photo-1708220040828-9ab1673681d3?auto=format&fit=crop&w=600&q=80"
-                  alt="Gold earrings — handcrafted jewellery"
-                  className="img-cover"
-                />
-              </div>
-            </div>
-            <div className="about-renaissance__text reveal reveal-delay-2">
-              <p className="section-eyebrow">The Renaissance</p>
-              <h2 className="about-renaissance__heading">
-                African design is not the future.<br />
-                It is the present.
-              </h2>
-              <p>
-                For decades, global fashion houses extracted patterns, textiles, and silhouettes
-                from the continent — and sold them back as "exotic inspiration." That era is ending.
-              </p>
-              <p>
-                Today, designers from Lagos, Nairobi, Accra, and Johannesburg are being awarded the
-                LVMH Prize, stocked at Selfridges, worn by global icons, and studied at fashion schools
-                in Paris and New York. African luxury is no longer emerging. It has arrived.
-              </p>
-              <p>
-                The continent that invented textile dyeing, beadwork as language, and pattern as
-                identity is now writing the next chapter of global fashion — on its own terms.
-              </p>
-              <div className="about-renaissance__quote">
-                "When Africa dresses itself, the world takes notes."
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="divider container" />
-
-      {/* ── Brands we celebrate ───────────────────────────────────────── */}
-      <section className="section">
-        <div className="container">
-          <p className="section-eyebrow reveal">The Vanguard</p>
-          <h2 className="section-title reveal" style={{ marginBottom: 12 }}>
-            Brands We Celebrate
-          </h2>
-          <p className="about-brands-intro reveal">
-            These are the names reshaping what African luxury means — from Johannesburg studios
-            to London runways to Nairobi storefronts.
-          </p>
-          <div className="about-brands-grid">
-            {BRANDS.map((b) => (
-              <div key={b.name} className="about-brand-card reveal">
-                <div className="about-brand-card__tag">{b.tag}</div>
-                <h3 className="about-brand-card__name">{b.name}</h3>
-                <p className="about-brand-card__origin">{b.origin}</p>
-                <p className="about-brand-card__note">{b.note}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Cut: three sections that stood here — "African Design, By the
+          Numbers" ($31B / 3,000+ / 54 / 2050 with no source), "The
+          Renaissance" (an unattributed pull-quote styled as if it were a
+          real, citable statement), and "Brands We Celebrate" (Maxhosa
+          Africa, Thebe Magugu, Christie Brown, Rich Mnisi etc., with
+          specific claims — LVMH Prize, stocked at Selfridges, worn by
+          Beyoncé — presented as Kamili's own assortment). None of it was
+          verifiable, the named brands don't match what's actually in the
+          products table, and a business claiming things it can't back up
+          is a liability, not a trust signal. Replace only with real
+          content — designers Kamili actually stocks, sourced from the
+          catalogue — never with another invented paragraph. */}
 
       <div className="divider container" />
 
@@ -354,62 +223,9 @@ export default function About() {
         </div>
       </section>
 
-      <div className="divider container" />
-
-      {/* ── The Future ────────────────────────────────────────────────── */}
-      <section className="section about-future">
-        <div className="container">
-          <div className="about-future__inner">
-            <div className="about-future__text reveal">
-              <p className="section-eyebrow">Looking Forward</p>
-              <h2 className="about-future__heading">The Next Chapter</h2>
-              <p>
-                By 2050, Africa will be home to 40% of the world's youth population. That is not
-                a demographic statistic — it is a creative force. A generation raised between
-                tradition and technology, fluent in both Swahili and streetwear, is already
-                designing, building, and buying differently.
-              </p>
-              <p>
-                African fashion weeks in Lagos, Nairobi, Kigali, and Cape Town are no longer
-                regional showcases — they set global conversations. African designers are not
-                waiting to be discovered. They are building their own distribution, their own
-                platforms, their own standards of excellence.
-              </p>
-              <p>
-                Kamili exists at that intersection. We are a window into what African luxury
-                looks like when it refuses to compromise. Clean lines, intentional craft,
-                cultural memory — and a quiet confidence that needs no validation.
-              </p>
-              <div className="about-future__pillars">
-                {['Craft', 'Identity', 'Intention', 'Legacy'].map((p) => (
-                  <div key={p} className="about-future__pill">{p}</div>
-                ))}
-              </div>
-            </div>
-            <div className="about-future__img-col reveal reveal-delay-2">
-              <div className="about-img-placeholder about-img-placeholder--wide">
-                <img
-                  src="https://images.unsplash.com/photo-1559563458-527698bf5295?auto=format&fit=crop&w=800&q=80"
-                  alt="Leather bag and watch — curated accessories"
-                  className="img-cover"
-                />
-              </div>
-              <div className="about-future__fact">
-                <span className="about-future__fact-num">40%</span>
-                <span className="about-future__fact-label">
-                  of the world's youth will be African by 2050 — the largest creative generation in history
-                </span>
-              </div>
-              <div className="about-future__fact about-future__fact--gold reveal reveal-delay-3">
-                <span className="about-future__fact-num">9%</span>
-                <span className="about-future__fact-label">
-                  annual growth rate of the African luxury goods market — outpacing Europe and North America
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Cut: "The Next Chapter" — built entirely on unsourced numbers
+          (40% of world youth by 2050, 9% market growth rate) presented as
+          fact with no citation. Same call as the sections above. */}
 
       <div className="divider container" />
 
@@ -490,18 +306,12 @@ export default function About() {
         </section>
       )}
 
-      <div className="divider container" />
-
-      {/* ── Pull quote ────────────────────────────────────────────────── */}
-      <section className="section-sm about-pullquote reveal">
-        <div className="container">
-          <blockquote className="about-bq">
-            <p>"The continent that gave the world its first art, its first music, its first language
-            of adornment — is now giving it the next era of luxury."</p>
-            <cite>— Kamili, Nairobi</cite>
-          </blockquote>
-        </div>
-      </section>
+      {/* Cut: a self-attributed pull-quote ("— Kamili, Nairobi") making the
+          same kind of sweeping, unsourced claim as the sections above,
+          styled with <blockquote>/<cite> to read as if it carried outside
+          authority. If Kamili wants a real quote here later, it should be
+          an actual quote — from a review, a press mention, the owner
+          speaking in their own voice — not one written to sound like one. */}
 
       <div className="divider container" />
 
