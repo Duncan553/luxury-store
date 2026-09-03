@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import MobileMenu from './MobileMenu';
 import './Navbar.css';
 
 const NAV_LINKS = [
@@ -11,7 +12,7 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
-  const { itemCount, setIsOpen } = useCart();
+  const { itemCount, isOpen: cartOpen, setIsOpen: setCartOpen } = useCart();
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const location = useLocation();
@@ -23,6 +24,11 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => setMenuOpen(false), [location]);
+
+  // Only one full-screen overlay makes sense open at a time — opening either
+  // the menu or the cart closes the other, so they never stack.
+  function openMenu() { setCartOpen(false); setMenuOpen(true); }
+  function openCart()  { setMenuOpen(false); setCartOpen(true); }
 
   return (
     <header className={`navbar${scrolled ? ' navbar--scrolled' : ''}`}>
@@ -42,7 +48,7 @@ export default function Navbar() {
         </nav>
 
         <div className="navbar__actions">
-          <button className="navbar__cart" onClick={() => setIsOpen(true)} aria-label={`Cart (${itemCount} items)`}>
+          <button className="navbar__cart" onClick={openCart} aria-label={`Cart (${itemCount} items)`}>
             <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
               <line x1="3" y1="6" x2="21" y2="6"/>
@@ -51,23 +57,22 @@ export default function Navbar() {
             {itemCount > 0 && <span className="navbar__badge">{itemCount}</span>}
           </button>
 
+          {/* Real dialog-trigger semantics: a screen reader announces
+              "Menu, button, collapsed/expanded" per WCAG 2.2, not just a
+              silently-toggling icon. */}
           <button
             className={`navbar__burger${menuOpen ? ' open' : ''}`}
-            onClick={() => setMenuOpen((v) => !v)}
-            aria-label="Toggle menu"
+            onClick={() => (menuOpen ? setMenuOpen(false) : openMenu())}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             <span /><span /><span />
           </button>
         </div>
       </div>
 
-      {/* Mobile drawer */}
-      <div className={`navbar__drawer${menuOpen ? ' navbar__drawer--open' : ''}`} aria-hidden={!menuOpen}>
-        {NAV_LINKS.map(({ label, to }) => (
-          <NavLink key={to} to={to} className="navbar__drawer-link">{label}</NavLink>
-        ))}
-      </div>
+      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
     </header>
   );
 }

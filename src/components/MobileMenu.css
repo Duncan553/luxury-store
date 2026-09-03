@@ -1,0 +1,93 @@
+/* MobileMenu.css — full-screen mobile nav overlay.
+   z-index 150: above the navbar (100) so it sits over everything on the page,
+   below the cart drawer (200) so opening the cart from inside the menu (via
+   the always-visible cart icon in the navbar, never hidden in here) puts the
+   cart on top rather than trapping it behind the menu. */
+.mmenu {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  /* Only ever mounted at mobile widths (see Navbar.css), but guard it
+     anyway so a resize mid-open can't leave a full-screen panel on desktop. */
+}
+@media (min-width: 769px) {
+  .mmenu { display: none; }
+}
+
+.mmenu__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 68px;                 /* matches .navbar__inner so nothing jumps */
+  padding: 0 20px;
+  flex: none;
+}
+.mmenu__logo {
+  font-family: var(--font-head);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.mmenu__close {
+  background: none; border: none; cursor: pointer;
+  color: var(--text); font-size: 18px;
+  width: 40px; height: 40px;             /* real 44px-ish tap target */
+  display: flex; align-items: center; justify-content: center;
+}
+
+.mmenu__links {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 24px;
+  gap: 4px;
+}
+.mmenu__link {
+  display: block;
+  font-family: var(--font-head);
+  font-size: clamp(2.4rem, 12vw, 3.4rem);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  transition: color 0.25s var(--ease);
+}
+.mmenu__links > div:last-child .mmenu__link { border-bottom: none; }
+.mmenu__link.active,
+.mmenu__link:active { color: var(--gold-light); }
+
+.mmenu__bottom {
+  flex: none;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border-top: 1px solid var(--border);
+}
+.mmenu__wa {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--green); color: #fff;
+  height: 46px; padding: 0 24px;
+  font-family: var(--font-body); font-size: 12px; font-weight: 500;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.mmenu__tag {
+  font-family: var(--font-head);
+  font-style: italic;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* prefers-reduced-motion: framer-motion's useReducedMotion already strips
+   the transform/stagger in JS — this backstops anything CSS-driven. */
+@media (prefers-reduced-motion: reduce) {
+  .mmenu, .mmenu__link { transition: none !important; }
+}

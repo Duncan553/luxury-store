@@ -78,23 +78,10 @@
 .navbar__burger.open span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
 .navbar__burger.open span:nth-child(2) { opacity: 0; }
 .navbar__burger.open span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-.navbar__drawer {
-  display: none; flex-direction: column;
-  background: var(--surface); border-bottom: 1px solid var(--border);
-  max-height: 0; overflow: hidden;
-  transition: max-height 0.4s var(--ease);
-}
-.navbar__drawer--open { max-height: 300px; }
-.navbar__drawer-link {
-  padding: 16px 28px;
-  font-size: 12px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--muted); border-bottom: 1px solid var(--border);
-  transition: color 0.2s, background 0.2s;
-}
-.navbar__drawer-link:hover { color: var(--text); background: var(--surface2); }
-.navbar__drawer-link:last-child { border-bottom: none; }
+/* Old accordion drawer removed — replaced by MobileMenu.jsx, a full-screen
+   overlay with scroll lock, Escape-to-close and real dialog semantics. See
+   the comment at the top of that file for why. */
 @media (max-width: 768px) {
   .navbar__links  { display: none; }
   .navbar__burger { display: flex; }
-  .navbar__drawer { display: flex; }
 }
