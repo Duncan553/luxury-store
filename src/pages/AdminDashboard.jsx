@@ -41,18 +41,6 @@ function startOfWeekKE() {
   return todayUTC - daysBack * 86_400_000;
 }
 
-// D2: WhatsApp 2FA reminder modal — shown once per month on first login.
-// Saved in localStorage so it survives page reloads without a DB round-trip.
-const WA2FA_KEY = 'kamili_wa2fa_reminded';
-function shouldShowWa2fa() {
-  try {
-    const last = localStorage.getItem(WA2FA_KEY);
-    if (!last) return true;
-    const ms = Date.now() - Number(last);
-    return ms > 30 * 24 * 60 * 60 * 1000; // 30 days
-  } catch { return false; }
-}
-
 // D3: days until a date string; null if blank or already passed.
 function daysUntil(dateStr) {
   if (!dateStr) return null;
@@ -79,8 +67,6 @@ export default function AdminDashboard() {
   const acToastTimer = useRef(null);
   // D1: unread admin reminders (monthly backup prompts, etc.)
   const [reminders,  setReminders]  = useState([]);
-  // D2: WhatsApp 2FA reminder modal
-  const [showWa2fa,  setShowWa2fa]  = useState(() => shouldShowWa2fa());
   // D3: renewal date warnings computed from settings (re-evaluated when settings load)
   const [expiryWarnings, setExpiryWarnings] = useState([]);
   function showAcToast(msg) {
@@ -388,31 +374,6 @@ export default function AdminDashboard() {
 
       {/* AC toast */}
       {acToast && <div className="admin-toast admin-toast--error">{acToast}</div>}
-
-      {/* D2: WhatsApp 2FA monthly reminder — annoying by design, that's the point */}
-      {showWa2fa && (
-        <div className="wa2fa-overlay">
-          <div className="wa2fa-modal">
-            <h3>Security Check</h3>
-            <p>
-              Is WhatsApp 2-step verification still enabled?<br />
-              <strong>Settings → Account → Two-step verification</strong><br /><br />
-              This protects your admin WhatsApp from SIM-swap attacks.
-            </p>
-            <div className="wa2fa-actions">
-              <button className="btn btn-gold" onClick={() => {
-                try { localStorage.setItem(WA2FA_KEY, String(Date.now())); } catch {}
-                setShowWa2fa(false);
-              }}>Yes, it's enabled</button>
-              <button className="btn btn-outline" onClick={() => {
-                const tomorrow = Date.now() - (29 * 24 * 60 * 60 * 1000); // 1 day from 30d window
-                try { localStorage.setItem(WA2FA_KEY, String(tomorrow)); } catch {}
-                setShowWa2fa(false);
-              }}>Remind me tomorrow</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* D3: expiry warnings */}
       {expiryWarnings.length > 0 && (

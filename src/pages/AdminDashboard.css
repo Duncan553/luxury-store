@@ -623,19 +623,6 @@
 /* C3: reconciliation KPI card accent */
 .kpi-card--reconcile { border-color: rgba(251,191,36,0.3); }
 
-/* D2: WhatsApp 2FA modal */
-.wa2fa-overlay {
-  position: fixed; inset: 0; z-index: 9998;
-  background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
-}
-.wa2fa-modal {
-  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
-  padding: 28px 32px; max-width: 400px; width: 90%; text-align: center;
-}
-.wa2fa-modal h3 { margin-bottom: 12px; font-family: var(--font-head); }
-.wa2fa-modal p  { color: var(--muted); font-size: 13px; line-height: 1.6; margin-bottom: 20px; }
-.wa2fa-actions  { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-
 /* D1: admin reminder banner */
 .reminder-banner {
   background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.3);
