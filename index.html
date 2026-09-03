@@ -2,12 +2,69 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Kamili — Curated luxury bags, jewelry & watches from Nairobi." />
-    <title>p.mwas| Quiet Luxury</title>
+
+    <!-- Brand + category + city. The old title said "p.mwas| Quiet Luxury",
+         which was the wrong brand and contained no word anyone searches for. -->
+    <title>Kamili — Luxury Bags, Jewellery &amp; Watches in Nairobi</title>
+    <meta name="description" content="Handpicked designer bags, jewellery and watches, delivered across Kenya. Order on WhatsApp — we reply in minutes." />
+    <link rel="canonical" href="https://kamili.co.ke/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="theme-color" content="#070707" />
+
+    <!-- Open Graph. This is the block that makes a link pasted into WhatsApp
+         show a picture and a headline instead of a bare URL. For a shop that
+         sells in DMs it is the highest-value markup on the page.
+         useSeo() overwrites these per route; these are the fallbacks and what
+         crawlers that don't run JS will read. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Kamili" />
+    <meta property="og:locale" content="en_KE" />
+    <meta property="og:title" content="Kamili — Luxury Bags, Jewellery &amp; Watches in Nairobi" />
+    <meta property="og:description" content="Handpicked designer bags, jewellery and watches, delivered across Kenya. Order on WhatsApp." />
+    <meta property="og:url" content="https://kamili.co.ke/" />
+    <meta property="og:image" content="https://kamili.co.ke/og-cover.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Kamili — curated luxury bags, jewellery and watches" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Kamili — Luxury Bags, Jewellery &amp; Watches in Nairobi" />
+    <meta name="twitter:description" content="Handpicked designer bags, jewellery and watches, delivered across Kenya." />
+    <meta name="twitter:image" content="https://kamili.co.ke/og-cover.jpg" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/favicon.svg" />
+
+    <!-- Fonts as a real <link>, not a CSS @import. @import made the browser
+         download and parse index.css before it even discovered the font
+         request; this way the preconnects below actually get used. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600&display=swap" />
+
+    <!-- LocalBusiness schema: tells Google this is a real shop in Nairobi with
+         a phone number, which is what qualifies it for local search results
+         and the knowledge panel. Update the fields marked TODO once confirmed. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Store",
+      "name": "Kamili",
+      "description": "Curated luxury bags, jewellery and watches, delivered across Kenya.",
+      "url": "https://kamili.co.ke",
+      "image": "https://kamili.co.ke/og-cover.jpg",
+      "telephone": "+254114256994",
+      "priceRange": "KSh",
+      "currenciesAccepted": "KES",
+      "paymentAccepted": "Cash, M-Pesa",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Nairobi",
+        "addressCountry": "KE"
+      },
+      "areaServed": { "@type": "Country", "name": "Kenya" }
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -22,43 +21,42 @@ function PrivateRoute({ children }) {
   return user ? children : <Navigate to="/admin/login" replace />;
 }
 
-function AppShell({ ready }) {
+function AppShell() {
   return (
     <>
       <ScrollProgress />
       {/* B1: shown only in Instagram/FB/TikTok/Snapchat in-app browsers */}
       <InAppBrowserBanner />
-      {ready && (
-        <>
-          <Navbar />
-          <CartModal />
-          <main>
-            <Routes>
-              <Route path="/"               element={<Home />} />
-              <Route path="/category/:name" element={<Category />} />
-              <Route path="/about"          element={<About />} />
-              <Route path="/admin/login"    element={<AdminLogin />} />
-              <Route path="/admin/dashboard"
-                element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
-              <Route path="*"              element={<Navigate to="/" replace />} />
-            </Routes>
-          </main>
-          <Footer />
-        </>
-      )}
+      <Navbar />
+      <CartModal />
+      <main>
+        <Routes>
+          <Route path="/"               element={<Home />} />
+          <Route path="/category/:name" element={<Category />} />
+          <Route path="/about"          element={<About />} />
+          <Route path="/admin/login"    element={<AdminLogin />} />
+          <Route path="/admin/dashboard"
+            element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+          <Route path="*"              element={<Navigate to="/" replace />} />
+        </Routes>
+      </main>
+      <Footer />
     </>
   );
 }
 
 export default function App() {
-  const [ready, setReady] = useState(false);
-
+  // The splash used to gate the whole app: nothing — not even the navbar —
+  // rendered until it finished, so a first visit was ~2.7s of black screen
+  // before any content, and ~4.2s before a tappable CTA. Now the store renders
+  // immediately and the splash fades away on top of it (it's position:fixed,
+  // z-index 9999), so the animation costs the customer nothing.
   return (
     <BrowserRouter>
       <AuthProvider>
         <CartProvider>
-          <LoadingScreen onComplete={() => setReady(true)} />
-          <AppShell ready={ready} />
+          <LoadingScreen />
+          <AppShell />
         </CartProvider>
       </AuthProvider>
     </BrowserRouter>

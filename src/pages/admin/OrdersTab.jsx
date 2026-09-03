@@ -1,7 +1,19 @@
-// OrdersTab — unified orders list.
-// A3: highlights possible duplicate payments (same phone, within 30 min).
-// A5: phone search box — any format normalised to last-9-digits match.
-// C1: dispatch photo upload — proof of dispatch saved to Supabase Storage.
+// OrdersTab — the order book for a WhatsApp shop.
+//
+// M-Pesa is gone, so there is no gateway to tell us an order was paid. The owner
+// IS the payment system now, which means the lifecycle has to be driven by hand:
+//
+//   new  →  confirmed  →  paid  →  dispatched
+//     └──────────────────────────→  cancelled
+//
+//   new        an order arrived from the site; nobody has replied yet
+//   confirmed  owner replied on WhatsApp, customer committed
+//   paid       money received  → this is what fires the stock decrement
+//   dispatched on its way      → stamps dispatched_at, arms the review prompt
+//   cancelled  fell through
+//
+// Marking an order 'paid' also records HOW they paid, because without that
+// "Today's Revenue" is a number nobody can trust.
 import { useState, useMemo, Fragment, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { fmt, fmtDate } from '../../lib/adminUtils';
@@ -9,35 +21,48 @@ import { uploadImage } from '../../lib/imageUpload';
 import { useAuth } from '../../context/AuthContext';
 
 const FILTERS = [
-  { key: 'all',     label: 'All'     },
-  { key: 'success', label: 'Paid'    },
-  { key: 'pending', label: 'Pending' },
-  { key: 'failed',  label: 'Failed'  },
+  { key: 'all',        label: 'All'        },
+  { key: 'new',        label: 'New'        },
+  { key: 'confirmed',  label: 'Confirmed'  },
+  { key: 'paid',       label: 'Paid'       },
+  { key: 'dispatched', label: 'Dispatched' },
+  { key: 'cancelled',  label: 'Cancelled'  },
 ];
 
-// A5: normalise a phone string to its last 9 digits — same logic as the DB trigger.
+// How the money actually arrived. Shown in the "Mark as paid" prompt.
+const PAY_METHODS = [
+  { key: 'cash',       label: 'Cash on delivery' },
+  { key: 'mpesa-till', label: 'M-Pesa Till / Paybill' },
+  { key: 'send-money', label: 'M-Pesa Send Money' },
+  { key: 'bank',       label: 'Bank transfer' },
+];
+
+// Normalise a phone string to its last 9 digits — same logic as the DB trigger,
+// so search matches +254…, 0…, 254… and bare 9-digit formats alike.
 function normPhone(raw) {
   return (raw || '').replace(/\D/g, '').slice(-9);
 }
+
+// Which statuses count as money in the bank.
+const PAID_STATES = ['paid', 'dispatched'];
 
 async function sendDispatchWhatsApp(p) {
   const clean = (p.phone || '').replace(/^0/, '254').replace(/\D/g, '');
   if (!clean) return;
   const name = p.customer_name ? `, ${p.customer_name.split(' ')[0]}` : '';
-  const dest = [p.city, p.county].filter(Boolean).join(', ') || 'your location';
   const msg  = [
     `Hi${name}! 📦`, '',
-    `Your Kamili order has been dispatched and is on its way to ${dest}.`, '',
-    `*Order ref:* ${p.order_id || p.mpesa_ref || '—'}`,
-    `*Amount paid:* Ksh ${Number(p.amount).toLocaleString('en-KE')}`, '',
+    'Your Kamili order has been dispatched and is on its way.', '',
+    `*Order ref:* ${p.order_id || '—'}`,
+    `*Amount:* Ksh ${Number(p.amount).toLocaleString('en-KE')}`, '',
     "We'll be in touch to confirm delivery. Thank you for choosing Kamili! 🛍️", '',
     '— Kamili Nairobi',
   ].join('\n');
   window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
-  supabase.from('payments')
-    .update({ dispatched_at: new Date().toISOString() })
-    .eq('id', p.id)
-    .then(({ error }) => { if (error) console.warn('[dispatch stamp]', error.message); });
+  // dispatched_at is what the review-prompt scheduler reads 5 days later.
+  await supabase.from('payments')
+    .update({ status: 'dispatched', dispatched_at: new Date().toISOString() })
+    .eq('id', p.id);
 }
 
 const WaIcon = () => (
@@ -50,26 +75,23 @@ function ReceiptContent({ p }) {
   const full = ts => ts ? new Date(ts).toLocaleString('en-KE', {
     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
   }) : '—';
+  const method = PAY_METHODS.find(m => m.key === p.paid_method)?.label
+    || p.paid_method || '—';
+
   return (
     <div className="receipt-print">
       <div className="receipt-print__brand">KAMILI</div>
       <div className="receipt-print__tagline">Quiet Luxury · Nairobi</div>
       <hr className="receipt-print__divider" />
-      <div className="receipt-print__row"><span>Receipt No.</span><strong>{p.mpesa_ref || '—'}</strong></div>
-      <div className="receipt-print__row"><span>Date</span><strong>{full(p.created_at)}</strong></div>
-      <div className="receipt-print__row"><span>Order ID</span><strong>{p.order_id || '—'}</strong></div>
+      <div className="receipt-print__row"><span>Order Ref</span><strong>{p.order_id || '—'}</strong></div>
+      <div className="receipt-print__row"><span>Ordered</span><strong>{full(p.created_at)}</strong></div>
+      {p.paid_at && <div className="receipt-print__row"><span>Paid</span><strong>{full(p.paid_at)}</strong></div>}
       <hr className="receipt-print__divider" />
       <div className="receipt-print__row"><span>Customer</span><strong>{p.customer_name || '—'}</strong></div>
       <div className="receipt-print__row">
         <span>Phone</span>
         <strong>{p.phone ? p.phone.replace(/^254/, '0') : '—'}</strong>
       </div>
-      <div className="receipt-print__row">
-        <span>Location</span>
-        <strong>{[p.city, p.county].filter(Boolean).join(', ') || '—'}</strong>
-      </div>
-      {p.address && <div className="receipt-print__row"><span>Address</span><strong>{p.address}</strong></div>}
-      {p.notes   && <div className="receipt-print__row"><span>Notes</span><strong>{p.notes}</strong></div>}
       <hr className="receipt-print__divider" />
       {Array.isArray(p.cart_items) && p.cart_items.length > 0 && (
         <>
@@ -83,11 +105,14 @@ function ReceiptContent({ p }) {
         </>
       )}
       <div className="receipt-print__row receipt-print__row--total">
-        <span>Amount Paid</span><strong>{fmt(p.amount)}</strong>
+        <span>Total</span><strong>{fmt(p.amount)}</strong>
       </div>
-      <div className="receipt-print__row"><span>Method</span><strong>M-Pesa STK Push</strong></div>
+      <div className="receipt-print__row"><span>Paid by</span><strong>{method}</strong></div>
       <div className="receipt-print__row">
-        <span>Status</span><strong style={{ color: 'var(--gold)' }}>PAID ✓</strong>
+        <span>Status</span>
+        <strong style={{ color: 'var(--gold)' }}>
+          {PAID_STATES.includes(p.status) ? 'PAID ✓' : p.status.toUpperCase()}
+        </strong>
       </div>
       <hr className="receipt-print__divider" />
       <div className="receipt-print__footer">Thank you for shopping at Kamili 🛍️</div>
@@ -95,12 +120,12 @@ function ReceiptContent({ p }) {
   );
 }
 
-// C1: dispatch photo uploader — per-row component to keep state isolated.
+// Dispatch photo uploader — per-row component so upload state stays isolated.
 function DispatchPhotoCell({ payment, isReadOnly }) {
-  const fileRef        = useRef(null);
-  const [uploading,    setUploading]    = useState(false);
-  const [photoUrl,     setPhotoUrl]     = useState(payment.dispatch_photo_url || null);
-  const [uploadError,  setUploadError]  = useState('');
+  const fileRef = useRef(null);
+  const [uploading,   setUploading]   = useState(false);
+  const [photoUrl,    setPhotoUrl]    = useState(payment.dispatch_photo_url || null);
+  const [uploadError, setUploadError] = useState('');
 
   async function handleFile(e) {
     const file = e.target.files[0];
@@ -108,8 +133,6 @@ function DispatchPhotoCell({ payment, isReadOnly }) {
     setUploading(true);
     setUploadError('');
     try {
-      // Reuse the existing uploadImage utility (compresses + uploads to 'images' bucket).
-      // C1: dispatch photos live under images/dispatch/{orderId} for easy identification.
       const folder = `dispatch/${payment.order_id || payment.id}`;
       const url    = await uploadImage(file, folder);
       const { error } = await supabase.from('payments')
@@ -148,47 +171,92 @@ function DispatchPhotoCell({ payment, isReadOnly }) {
   );
 }
 
+// The "how did they pay?" step. Recording the method is what makes the revenue
+// KPI mean anything, so marking paid always goes through here.
+function PaidModal({ payment, onClose }) {
+  const [method, setMethod] = useState('cash');
+  const [saving, setSaving] = useState(false);
+
+  async function confirm() {
+    setSaving(true);
+    // Setting status='paid' is what fires fn_decrement_stock_on_payment.
+    await supabase.from('payments')
+      .update({ status: 'paid', paid_method: method, paid_at: new Date().toISOString() })
+      .eq('id', payment.id);
+    setSaving(false);
+    onClose();
+  }
+
+  return (
+    <div className="receipt-modal-overlay" onClick={onClose}>
+      <div className="receipt-modal" style={{ maxWidth: 380 }} onClick={e => e.stopPropagation()}>
+        <div className="receipt-modal__header">
+          <h3>Mark as paid</h3>
+          <button onClick={onClose}>✕</button>
+        </div>
+        <div className="receipt-modal__body">
+          <p style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 14 }}>
+            {payment.customer_name || 'Customer'} · <strong style={{ color: 'var(--gold)' }}>{fmt(payment.amount)}</strong>
+            <br />This also removes the items from stock.
+          </p>
+          <div className="form-group">
+            <label className="form-label">How did they pay?</label>
+            <select value={method} onChange={e => setMethod(e.target.value)}>
+              {PAY_METHODS.map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
+            </select>
+          </div>
+        </div>
+        <div className="receipt-modal__actions">
+          <button className="btn btn-gold" onClick={confirm} disabled={saving}>
+            {saving ? 'Saving…' : 'Confirm payment'}
+          </button>
+          <button className="btn btn-outline" onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function OrdersTab({ payments, defaultFilter = 'all' }) {
   const { isReadOnly } = useAuth();
   const [filter,       setFilter]       = useState(defaultFilter);
   const [expanded,     setExpanded]     = useState(new Set());
   const [receiptModal, setReceiptModal] = useState(null);
-  // A5: phone search — any format, normalised on the fly.
+  const [paidModal,    setPaidModal]    = useState(null);
   const [phoneSearch,  setPhoneSearch]  = useState('');
 
-  // A3: build a set of payment IDs that are possible duplicates.
-  // Criteria: same phone + status=success + within 30 minutes of each other.
+  // Possible duplicates: same phone, both paid, within 30 minutes.
+  // Worth flagging before you dispatch two of the same thing.
   const duplicateIds = useMemo(() => {
-    const ids     = new Set();
-    const success = payments.filter(p => p.status === 'success' && p.phone);
-    for (let i = 0; i < success.length; i++) {
-      for (let j = i + 1; j < success.length; j++) {
-        const pi = success[i], pj = success[j];
+    const ids  = new Set();
+    const paid = payments.filter(p => PAID_STATES.includes(p.status) && p.phone);
+    for (let i = 0; i < paid.length; i++) {
+      for (let j = i + 1; j < paid.length; j++) {
+        const pi = paid[i], pj = paid[j];
         if (pi.phone === pj.phone &&
             Math.abs(new Date(pi.created_at) - new Date(pj.created_at)) < 30 * 60 * 1000) {
-          ids.add(pi.id);
-          ids.add(pj.id);
+          ids.add(pi.id); ids.add(pj.id);
         }
       }
     }
     return ids;
   }, [payments]);
 
-  // A5: filter by normalised phone — matches +254, 07, 254, and bare 9-digit formats.
   const visiblePayments = useMemo(() => {
     const q = normPhone(phoneSearch);
-    let list = q.length >= 7
+    const list = q.length >= 7
       ? payments.filter(p => normPhone(p.phone).endsWith(q) || q.endsWith(normPhone(p.phone)))
       : payments;
     return filter === 'all' ? list : list.filter(p => p.status === filter);
   }, [payments, filter, phoneSearch]);
 
-  const counts = {
-    all:     payments.length,
-    success: payments.filter(p => p.status === 'success').length,
-    pending: payments.filter(p => p.status === 'pending').length,
-    failed:  payments.filter(p => p.status === 'failed').length,
-  };
+  const counts = useMemo(() => {
+    const c = { all: payments.length };
+    for (const f of FILTERS) {
+      if (f.key !== 'all') c[f.key] = payments.filter(p => p.status === f.key).length;
+    }
+    return c;
+  }, [payments]);
 
   function toggleExpand(id) {
     setExpanded(prev => {
@@ -198,12 +266,19 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
     });
   }
 
-  const pillClass = s =>
-    `status-pill status-pill--${s === 'success' ? 'available' : s === 'pending' ? 'pre-order' : 'out-of-stock'}`;
+  async function setStatus(p, status) {
+    await supabase.from('payments').update({ status }).eq('id', p.id);
+  }
+
+  // Reuse the existing status-pill colours: green = money in, amber = in
+  // progress, red = dead.
+  const pillClass = s => `status-pill status-pill--${
+    PAID_STATES.includes(s) ? 'available' :
+    s === 'cancelled'       ? 'out-of-stock' : 'pre-order'
+  }`;
 
   return (
     <div>
-      {/* A5: phone search */}
       <div style={{ marginBottom: 12 }}>
         <input
           type="tel"
@@ -215,7 +290,6 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
         />
       </div>
 
-      {/* Filter bar */}
       <div className="tab-filter-bar">
         {FILTERS.map(f => (
           <button key={f.key}
@@ -228,7 +302,7 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
 
       {visiblePayments.length === 0 ? (
         <p className="admin-empty">
-          {phoneSearch ? 'No payments match that phone number.' : 'No orders match this filter.'}
+          {phoneSearch ? 'No orders match that phone number.' : 'No orders match this filter.'}
         </p>
       ) : (
         <div className="tbl-wrap">
@@ -239,7 +313,6 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
                 <th>Date</th>
                 <th>Customer</th>
                 <th>Phone</th>
-                <th>Location</th>
                 <th>Amount</th>
                 <th>Ref</th>
                 <th>Status</th>
@@ -249,10 +322,10 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
             </thead>
             <tbody>
               {visiblePayments.map(p => {
-                const hasItems  = Array.isArray(p.cart_items) && p.cart_items.length > 0;
-                const isExpanded = expanded.has(p.id);
-                // A3: flag possible duplicates so I can investigate before re-dispatching.
+                const hasItems    = Array.isArray(p.cart_items) && p.cart_items.length > 0;
+                const isExpanded  = expanded.has(p.id);
                 const isDuplicate = duplicateIds.has(p.id);
+                const isPaid      = PAID_STATES.includes(p.status);
 
                 return (
                   <Fragment key={p.id}>
@@ -272,56 +345,61 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
                         {p.customer_name
                           ? <span className="sale-name">{p.customer_name}</span>
                           : <span style={{ color: 'var(--muted2)', fontSize: 11 }}>—</span>}
-                        {/* A3: amber badge — same phone paid twice in 30 min — investigate before dispatching */}
-                        {isDuplicate && (
-                          <span className="duplicate-badge">POSSIBLE DUPLICATE</span>
-                        )}
+                        {isDuplicate && <span className="duplicate-badge">POSSIBLE DUPLICATE</span>}
                       </td>
                       <td style={{ fontSize: 12 }}>
-                        {p.phone ? p.phone.replace(/^254/, '0') : '—'}
-                      </td>
-                      <td style={{ fontSize: 12 }}>
-                        {[p.city, p.county].filter(Boolean).join(', ') || '—'}
+                        {/* Tap-to-chat: the owner works out of WhatsApp, so the
+                            phone number should open the conversation directly. */}
+                        {p.phone
+                          ? <a href={`https://wa.me/${p.phone.replace(/^0/, '254').replace(/\D/g, '')}`}
+                               target="_blank" rel="noopener noreferrer"
+                               style={{ color: 'var(--green)' }}>
+                              {p.phone.replace(/^254/, '0')}
+                            </a>
+                          : '—'}
                       </td>
                       <td style={{ fontWeight: 500, color: 'var(--gold)' }}>{fmt(p.amount)}</td>
                       <td style={{ fontSize: 11, fontFamily: 'monospace', letterSpacing: '0.05em' }}>
-                        {p.mpesa_ref || '—'}
+                        {p.order_id || '—'}
                       </td>
+                      <td><span className={pillClass(p.status)}>{p.status}</span></td>
+                      <td>{isPaid && <DispatchPhotoCell payment={p} isReadOnly={isReadOnly} />}</td>
                       <td>
-                        <span className={pillClass(p.status)}>
-                          {p.status === 'success' ? 'Paid' : p.status}
-                        </span>
-                      </td>
-                      {/* C1: dispatch photo column */}
-                      <td>
-                        {p.status === 'success' && (
-                          <DispatchPhotoCell payment={p} isReadOnly={isReadOnly} />
-                        )}
-                      </td>
-                      <td>
-                        {p.status === 'success' && (
-                          <div className="tbl-actions">
-                            {!isReadOnly && (
-                              <button className="btn btn-whatsapp"
-                                style={{ height: 30, padding: '0 10px', fontSize: 11 }}
-                                onClick={() => sendDispatchWhatsApp(p)}
-                                title="Notify customer their order is on the way">
-                                <WaIcon />Sent
-                              </button>
-                            )}
-                            <button className="btn btn-outline"
-                              style={{ height: 30, padding: '0 10px', fontSize: 11 }}
-                              onClick={() => setReceiptModal(p)}>
-                              Receipt
+                        <div className="tbl-actions">
+                          {!isReadOnly && p.status === 'new' && (
+                            <>
+                              <button className="btn btn-outline" style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                                onClick={() => setStatus(p, 'confirmed')}>Confirm</button>
+                              <button className="ac-btn ac-btn--link" style={{ fontSize: 10 }}
+                                onClick={() => setStatus(p, 'cancelled')}>Cancel</button>
+                            </>
+                          )}
+                          {!isReadOnly && p.status === 'confirmed' && (
+                            <>
+                              <button className="btn btn-gold" style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                                onClick={() => setPaidModal(p)}>Mark paid</button>
+                              <button className="ac-btn ac-btn--link" style={{ fontSize: 10 }}
+                                onClick={() => setStatus(p, 'cancelled')}>Cancel</button>
+                            </>
+                          )}
+                          {!isReadOnly && p.status === 'paid' && (
+                            <button className="btn btn-whatsapp" style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                              onClick={() => sendDispatchWhatsApp(p)}
+                              title="Tell the customer it's on the way">
+                              <WaIcon />Dispatch
                             </button>
-                          </div>
-                        )}
+                          )}
+                          {isPaid && (
+                            <button className="btn btn-outline" style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                              onClick={() => setReceiptModal(p)}>Receipt</button>
+                          )}
+                        </div>
                       </td>
                     </tr>
 
                     {isExpanded && hasItems && (
                       <tr className="cart-items-row">
-                        <td colSpan={10}>
+                        <td colSpan={9}>
                           <div className="cart-items-expand">
                             <span className="cart-items-expand__label">Items ordered:</span>
                             <div className="cart-items-expand__list">
@@ -346,6 +424,8 @@ export default function OrdersTab({ payments, defaultFilter = 'all' }) {
           </table>
         </div>
       )}
+
+      {paidModal && <PaidModal payment={paidModal} onClose={() => setPaidModal(null)} />}
 
       {receiptModal && (
         <div className="receipt-modal-overlay" onClick={() => setReceiptModal(null)}>

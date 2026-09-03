@@ -161,7 +161,7 @@ export default function AdminDashboard() {
     return (raw || '').replace(/^0/, '254').replace(/\D/g, '');
   }
 
-  // Task 1: auto thank-you sent when a payment flips to status='success'.
+  // Auto thank-you, sent when an order flips to status='paid'.
   // Opens wa.me in a new tab and marks thankyou_sent=true so a reload
   // or a second realtime event doesn't re-trigger it.
   function sendThankYouWhatsApp(p) {
@@ -222,7 +222,7 @@ export default function AdminDashboard() {
       .subscribe();
 
     // Payments: INSERT just refreshes the list.
-    // UPDATE: also check for a new success event → send auto thank-you.
+    // UPDATE: also check for a new 'paid' event → send auto thank-you.
     const payCh = supabase.channel('adm-payments')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'payments' },
         fetchPayments)
@@ -230,12 +230,11 @@ export default function AdminDashboard() {
         (payload) => {
           fetchPayments();
           const p = payload.new;
-          // Guard: only fire when this UPDATE is the transition to 'success'
-          // AND the thank-you hasn't already been sent (prevents re-trigger on reload).
-          // Guard: only send if status just became 'success' and WA not yet sent.
+          // Guard: only fire on the transition to 'paid', and only if the
+          // thank-you hasn't already been sent (prevents re-trigger on reload).
           // The .eq('thankyou_sent', false) acts as an optimistic lock —
           // only one tab wins the DB write; the other gets data=[] and skips.
-          if (p.status === 'success' && !p.thankyou_sent && p.phone) {
+          if (p.status === 'paid' && !p.thankyou_sent && p.phone) {
             supabase.from('payments')
               .update({ thankyou_sent: true })
               .eq('id', p.id)
@@ -272,24 +271,28 @@ export default function AdminDashboard() {
   const kpi = useMemo(() => {
     const todayUTC = startOfTodayKE();
     const weekUTC  = startOfWeekKE();
-    const paid     = payments.filter(p => p.status === 'success');
+    // 'paid' and 'dispatched' are both money in the bank. Revenue is dated by
+    // paid_at when we have it — an order placed Monday and paid Thursday is
+    // Thursday's money — falling back to created_at for legacy rows.
+    const PAID = ['paid', 'dispatched'];
+    const paid = payments.filter(p => PAID.includes(p.status));
+    const paidTime = p => new Date(p.paid_at || p.created_at).getTime();
 
     const todayRevenue = paid
-      .filter(p => new Date(p.created_at).getTime() >= todayUTC)
+      .filter(p => paidTime(p) >= todayUTC)
       .reduce((s, p) => s + Number(p.amount || 0), 0);
 
     const weekRevenue = paid
-      .filter(p => new Date(p.created_at).getTime() >= weekUTC)
+      .filter(p => paidTime(p) >= weekUTC)
       .reduce((s, p) => s + Number(p.amount || 0), 0);
 
-    const pendingCount  = payments.filter(p => p.status === 'pending').length;
+    // Orders still needing the owner to act: replied-to or not.
+    const pendingCount  = payments.filter(p => ['new', 'confirmed'].includes(p.status)).length;
     const lowStockCount = products.filter(p => p.status !== 'Pre-Order' && (p.quantity ?? 0) <= 5 && (p.quantity ?? 0) > 0).length;
     const reviewCount   = reviews.length;
-    // C3: payments still pending in the last 24 hours — admin should reconcile or cancel these daily.
-    const yesterday     = Date.now() - 24 * 60 * 60 * 1000;
-    const reconcileCount = payments.filter(p =>
-      p.status === 'pending' && new Date(p.created_at).getTime() > yesterday
-    ).length;
+    // Unanswered orders. In a WhatsApp shop this is the number that costs money
+    // if it isn't zero — every one is a customer waiting for a reply.
+    const reconcileCount = payments.filter(p => p.status === 'new').length;
 
     return { todayRevenue, weekRevenue, pendingCount, lowStockCount, reviewCount, reconcileCount };
   }, [payments, products, reviews]);
@@ -300,14 +303,14 @@ export default function AdminDashboard() {
     products.filter(p => p.status !== 'Pre-Order' && (p.quantity ?? 0) > 0 && (p.quantity ?? 0) <= 5),
   [products]);
 
-  // Stale payments: still 'pending' (not yet failed/succeeded) after 30 min.
-  // Deliberately excludes 'failed' — once the pg_cron timeout fires, it's the
-  // terminal state and re-surfacing it forever would clutter the AC.
-  const THIRTY_MIN = 30 * 60 * 1000;
+  // Unanswered orders: sitting at 'new' for more than 15 minutes. The whole
+  // promise of this shop is "the owner replies immediately", so this list is
+  // the single most urgent thing on the dashboard.
+  const FIFTEEN_MIN = 15 * 60 * 1000;
   const acStalePayments = useMemo(() =>
     payments.filter(p =>
-      p.status === 'pending' &&
-      Date.now() - new Date(p.created_at).getTime() > THIRTY_MIN
+      p.status === 'new' &&
+      Date.now() - new Date(p.created_at).getTime() > FIFTEEN_MIN
     ),
   [payments]);
 
@@ -359,7 +362,7 @@ export default function AdminDashboard() {
 
   // ── Tab definitions (badges use live data) ──────────────────────────────────
   const TABS = [
-    { key: 'orders',     label: 'Orders',     badge: kpi.pendingCount  || null },
+    { key: 'orders',     label: 'Orders',     badge: kpi.reconcileCount || null },
     { key: 'products',   label: 'Products',   badge: kpi.lowStockCount || null },
     { key: 'categories', label: 'Categories', badge: null                      },
     { key: 'reviews',    label: 'Reviews',    badge: kpi.reviewCount   || null },
@@ -437,13 +440,13 @@ export default function AdminDashboard() {
       <div className="kpi-strip">
         <div className="container kpi-strip__inner">
 
-          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'success')}>
+          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'paid')}>
             <span className="kpi-card__label">Today's Revenue</span>
             <span className="kpi-card__value">{fmt(kpi.todayRevenue)}</span>
             <span className="kpi-card__sub">Kenya time</span>
           </button>
 
-          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'success')}>
+          <button className="kpi-card kpi-card--gold" onClick={() => jumpToTab('orders', 'paid')}>
             <span className="kpi-card__label">This Week</span>
             <span className="kpi-card__value">{fmt(kpi.weekRevenue)}</span>
             <span className="kpi-card__sub">Mon – today</span>
@@ -451,13 +454,13 @@ export default function AdminDashboard() {
 
           <button className="kpi-card"
             style={kpi.pendingCount > 0 ? { borderColor: 'rgba(251,191,36,0.35)' } : {}}
-            onClick={() => jumpToTab('orders', 'pending')}>
-            <span className="kpi-card__label">Pending Orders</span>
+            onClick={() => jumpToTab('orders', 'new')}>
+            <span className="kpi-card__label">Open Orders</span>
             <span className="kpi-card__value"
               style={{ color: kpi.pendingCount > 0 ? '#fbbf24' : 'var(--gold)' }}>
               {kpi.pendingCount}
             </span>
-            <span className="kpi-card__sub">awaiting M-Pesa</span>
+            <span className="kpi-card__sub">to confirm or collect</span>
           </button>
 
           <button className="kpi-card"
@@ -479,16 +482,16 @@ export default function AdminDashboard() {
             <span className="kpi-card__sub">need approval</span>
           </button>
 
-          {/* C3: daily reconciliation prompt — click to filter Orders to pending from last 24h */}
+          {/* Unanswered orders — click to filter Orders to the 'new' queue */}
           <button className="kpi-card kpi-card--reconcile"
             style={kpi.reconcileCount > 0 ? { borderColor: 'rgba(251,191,36,0.4)' } : {}}
-            onClick={() => jumpToTab('orders', 'pending')}>
-            <span className="kpi-card__label">Reconcile</span>
+            onClick={() => jumpToTab('orders', 'new')}>
+            <span className="kpi-card__label">Unanswered</span>
             <span className="kpi-card__value"
               style={{ color: kpi.reconcileCount > 0 ? '#fbbf24' : 'var(--gold)' }}>
               {kpi.reconcileCount}
             </span>
-            <span className="kpi-card__sub">pending last 24h</span>
+            <span className="kpi-card__sub">no reply sent yet</span>
           </button>
 
         </div>
@@ -546,17 +549,17 @@ export default function AdminDashboard() {
             {/* Stale payments: just surfaced, no one-click action */}
             {acStalePayments.length > 0 && (
               <div className="ac-section">
-                <span className="ac-section__label">Stale Payments</span>
+                <span className="ac-section__label">Waiting For Your Reply</span>
                 {acStalePayments.map(p => (
                   <div key={p.id} className="ac-row">
                     <span className={`ac-status-dot ac-status-dot--${p.status}`} />
                     <span className="ac-row__name">{p.customer_name || 'Unknown'}</span>
                     <span className="ac-row__amount">{fmt(p.amount)}</span>
                     <span className="ac-row__qty ac-row__qty--warn">
-                      {p.status} · {Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000)} min ago
+                      waiting {Math.round((Date.now() - new Date(p.created_at).getTime()) / 60000)} min
                     </span>
                     <button className="ac-btn ac-btn--link"
-                      onClick={() => jumpToTab('orders', p.status)}>
+                      onClick={() => jumpToTab('orders', 'new')}>
                       View →
                     </button>
                   </div>

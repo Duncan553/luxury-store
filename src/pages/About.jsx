@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useSeo, reviewJsonLd } from '../lib/seo';
 import './About.css';
 
 /* ── Star rating input ───────────────────────────────────────────── */
@@ -121,6 +122,14 @@ export default function About() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted]   = useState(false);
   const [error, setError]           = useState('');
+
+  // The aggregate rating here is what can put review stars in Google results.
+  useSeo({
+    title: 'About Kamili — Curated Luxury from Nairobi',
+    description: 'Kamili curates luxury bags, jewellery and watches in Nairobi. Read customer reviews, find our contact details and opening hours.',
+    path: '/about',
+    jsonLd: reviewJsonLd(reviews),
+  });
 
   useScrollReveal();
 

@@ -2,43 +2,55 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './LoadingScreen.css';
 
-export default function LoadingScreen({ onComplete }) {
-  const [visible, setVisible] = useState(true);
+// The splash no longer gates the app (see App.jsx) — it just fades over it.
+// Two changes for the customer's benefit:
+//   * 2000ms → 900ms. Long enough to read KAMILI, short enough not to annoy.
+//   * skipped entirely for the rest of the session, so browsing between
+//     categories never replays it.
+const SEEN_KEY = 'kamili_splash_seen';
+
+export default function LoadingScreen() {
+  const [visible, setVisible] = useState(() => {
+    try { return !sessionStorage.getItem(SEEN_KEY); } catch { return true; }
+  });
 
   useEffect(() => {
-    const t = setTimeout(() => {
-      setVisible(false);
-      setTimeout(onComplete, 700);
-    }, 2000);
+    if (!visible) return;
+    try { sessionStorage.setItem(SEEN_KEY, '1'); } catch {}
+    const t = setTimeout(() => setVisible(false), 900);
     return () => clearTimeout(t);
-  }, [onComplete]);
+    // Intentionally runs once — `visible` only ever goes true → false here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <AnimatePresence>
       {visible && (
         <motion.div className="ls"
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.7, ease: [0.76, 0, 0.24, 1] }}>
+          transition={{ duration: 0.45, ease: [0.76, 0, 0.24, 1] }}>
 
           <motion.p className="ls__eyebrow"
             initial={{ opacity: 0, letterSpacing: '0.6em' }}
             animate={{ opacity: 1, letterSpacing: '0.3em' }}
-            transition={{ duration: 1, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.1 }}>
+            transition={{ duration: 0.5, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.05 }}>
             Nairobi · Est. 2024
           </motion.p>
 
-          <motion.h1 className="ls__logo"
+          {/* Not an <h1>: this is decorative, and the page's real h1 is
+              already in the DOM behind it. Two h1s confuse crawlers. */}
+          <motion.div className="ls__logo" aria-hidden="true"
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.9, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.3 }}>
+            transition={{ duration: 0.45, ease: [0.25, 0.46, 0.45, 0.94], delay: 0.12 }}>
             KAMILI
-          </motion.h1>
+          </motion.div>
 
           <div className="ls__line-wrap">
             <motion.div className="ls__line"
               initial={{ scaleX: 0 }}
               animate={{ scaleX: 1 }}
-              transition={{ duration: 1.1, ease: [0.76, 0, 0.24, 1], delay: 0.7 }} />
+              transition={{ duration: 0.5, ease: [0.76, 0, 0.24, 1], delay: 0.3 }} />
           </div>
 
         </motion.div>

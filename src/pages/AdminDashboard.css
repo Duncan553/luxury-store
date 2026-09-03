@@ -548,13 +548,18 @@
 }
 .settings-profile__email { font-size: 14px; color: var(--muted); flex: 1; }
 
-/* ── WhatsApp button ──────────────────────────────────────────────── */
-.btn-whatsapp {
+/* ── WhatsApp button (ADMIN ONLY) ─────────────────────────────────── */
+/* Scoped to .admin-page on purpose. This used to be a bare `.btn-whatsapp`
+   rule, and because Vite bundles all CSS into one file for production, it
+   silently overrode the storefront's solid-green button everywhere — turning
+   the shop's only checkout CTA into a low-contrast outline. Same specificity,
+   so load order decided it. Keep admin styles behind .admin-page. */
+.admin-page .btn-whatsapp {
   background: rgba(37,211,102,0.12); border: 1px solid rgba(37,211,102,0.35);
   color: #25d366; display: inline-flex; align-items: center;
   transition: background 0.15s;
 }
-.btn-whatsapp:hover { background: rgba(37,211,102,0.2); }
+.admin-page .btn-whatsapp:hover { background: rgba(37,211,102,0.2); }
 
 /* ── Admin body padding in new layout ─────────────────────────────── */
 .admin-body { padding-top: 24px; padding-bottom: 80px; }

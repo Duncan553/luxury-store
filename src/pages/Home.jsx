@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import Lightbox from '../components/Lightbox';
 import Marquee from '../components/Marquee';
+import { useSeo } from '../lib/seo';
 import './Home.css';
 
 const FALLBACK_IMGS = {
@@ -94,6 +95,14 @@ export default function Home() {
   const prevProduct   = useCallback(() => setLbIndex(i => Math.max(0, i - 1)), []);
   const nextProduct   = useCallback(() => setLbIndex(i => Math.min(preorders.length - 1, i + 1)), [preorders.length]);
 
+  // Homepage head. Written for a person scanning a Google result, not a crawler:
+  // what we sell, where we are, and how ordering works.
+  useSeo({
+    title: 'Luxury Bags, Jewellery & Watches in Nairobi',
+    description: 'Handpicked designer bags, jewellery and watches, delivered across Kenya. Order on WhatsApp — we reply in minutes.',
+    path: '/',
+  });
+
   const { scrollY }  = useScroll();
   const heroY        = useTransform(scrollY, [0, 800], [0, 200]);
   const heroOp       = useTransform(scrollY, [0, 500], [1, 0]);
@@ -160,12 +169,14 @@ export default function Home() {
               transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}>
               Quiet<br /><em>Luxury.</em>
             </motion.h1>
-            <motion.h1 className="hero__heading hero__heading--outline"
+            {/* Second line is part of the same visual headline, so it must not
+                be a second <h1> — styling comes from the class, not the tag. */}
+            <motion.div className="hero__heading hero__heading--outline"
               initial={{ opacity: 0, y: 60, skewY: 3 }}
               animate={{ opacity: 1, y: 0, skewY: 0 }}
               transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.85 }}>
               Undeniable<br />Presence.
-            </motion.h1>
+            </motion.div>
           </div>
 
           <motion.p className="hero__sub"
@@ -174,6 +185,14 @@ export default function Home() {
             transition={{ duration: 0.9, ease, delay: 1.2 }}>
             Handpicked bags, jewelry &amp; watches<br />for those who need no introduction.
           </motion.p>
+
+          {/* The hero art sells the feeling; this line sells the search term.
+              "Quiet Luxury" is not something anyone types into Google. */}
+          <motion.h2 className="hero__seo-line"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, ease, delay: 0.6 }}>
+            Designer bags, jewellery &amp; watches in Nairobi — delivered across Kenya
+          </motion.h2>
 
           <motion.div className="hero__ctas"
             initial={{ opacity: 0, y: 20 }}
@@ -337,8 +356,8 @@ export default function Home() {
             {/* Small cards */}
             <motion.div variants={itemV} className="bento-card bento-card--sm bento-card--gold">
               <span className="bento-card__num">01</span>
-              <h3 className="bento-card__title">Secure Ordering</h3>
-              <p className="bento-card__desc">Pay via M-Pesa or WhatsApp — safe, fast, Kenyan.</p>
+              <h3 className="bento-card__title">Order on WhatsApp</h3>
+              <p className="bento-card__desc">Chat first, pay when you're sure. No card details, no forms.</p>
             </motion.div>
 
             <motion.div variants={itemV} className="bento-card bento-card--sm">

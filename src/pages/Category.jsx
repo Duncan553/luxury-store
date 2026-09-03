@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import Lightbox from '../components/Lightbox';
 import { useScrollReveal } from '../hooks/useScrollReveal';
+import { useSeo, productListJsonLd } from '../lib/seo';
 import './Category.css';
 
 export default function Category() {
@@ -22,6 +23,17 @@ export default function Category() {
   const closeLightbox = useCallback(() => setLbIndex(null), []);
   const prevProduct   = useCallback(() => setLbIndex(i => Math.max(0, i - 1)), []);
   const nextProduct   = useCallback(() => setLbIndex(i => Math.min(filtered.length - 1, i + 1)), [filtered.length]);
+
+  // Long-tail, high-intent title: the category, the city, and the two words
+  // people actually search for in Kenyan resale ("authentic", "pre-loved").
+  // The ItemList JSON-LD hands Google the names and prices on this page.
+  useSeo({
+    title: `${label} in Nairobi — Authentic & Pre-loved`,
+    description: `Shop ${filtered.length || ''} handpicked ${label.toLowerCase()} at Kamili Nairobi. Delivered across Kenya, ordered on WhatsApp.`.replace('  ', ' '),
+    path: `/category/${name}`,
+    image: filtered[0]?.image_url,
+    jsonLd: productListJsonLd(filtered, label),
+  });
 
   useScrollReveal();
 
@@ -45,6 +57,10 @@ export default function Category() {
         <div className="container">
           <span className="section-eyebrow">Kamili / {label}</span>
           <h1 className="cat-hero__title">{label}</h1>
+          {/* Sub-headline carries the keywords a bare noun H1 can't. */}
+          <p className="cat-hero__blurb">
+            Authentic &amp; pre-loved {label.toLowerCase()} in Nairobi · delivered across Kenya
+          </p>
           <p className="cat-hero__count">
             {loading ? '' : `${filtered.length} ${filtered.length === 1 ? 'piece' : 'pieces'}`}
           </p>

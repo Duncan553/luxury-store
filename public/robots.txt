@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# The admin is not content — keep it out of the index.
+Disallow: /admin
+
+Sitemap: https://kamili.co.ke/sitemap.xml

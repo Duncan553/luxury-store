@@ -1,18 +1,12 @@
+// CartModal.jsx — cart drawer + WhatsApp checkout.
+//
+// WhatsApp is the ONLY checkout. There is no M-Pesa step and no delivery-address
+// step: the owner replies in the chat within minutes, so the address is a
+// conversation, not a form. Every field we ask for before the chat opens is a
+// place the customer can drop off, so we ask for two: name and phone.
 import { useEffect, useRef, useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { useDeliveryLocation } from '../hooks/useLocation';
-import MpesaCheckout from './MpesaCheckout';
 import './CartModal.css';
-
-const COUNTIES = [
-  'Baringo','Bomet','Bungoma','Busia','Elgeyo-Marakwet','Embu','Garissa',
-  'Homa Bay','Isiolo','Kajiado','Kakamega','Kericho','Kiambu','Kilifi',
-  'Kirinyaga','Kisii','Kisumu','Kitui','Kwale','Laikipia','Lamu','Machakos',
-  'Makueni','Mandera','Marsabit','Meru','Migori','Mombasa',"Murang'a",
-  'Nairobi','Nakuru','Nandi','Narok','Nyamira','Nyandarua','Nyeri',
-  'Samburu','Siaya','Taita-Taveta','Tana River','Tharaka-Nithi',
-  'Trans-Nzoia','Turkana','Uasin Gishu','Vihiga','Wajir','West Pokot',
-];
 
 const WA_ICON = (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -25,20 +19,19 @@ export default function CartModal() {
     items, isOpen, setIsOpen, removeItem, updateQty, total,
     checkoutViaWhatsApp, checkoutView, setCheckoutView, clearCart,
   } = useCart();
-  const { getLocation, loading: locLoading } = useDeliveryLocation();
 
-  // view: 'cart' | 'whatsapp' | 'mpesa'
+  // view: 'cart' | 'whatsapp'
   const [view, setView] = useState('cart');
 
-  // WhatsApp form fields
-  const [waName,    setWaName]    = useState('');
-  const [waPhone,   setWaPhone]   = useState('');
-  const [waCounty,  setWaCounty]  = useState('');
-  const [waCity,    setWaCity]    = useState('');
-  const [waAddress, setWaAddress] = useState('');
-  const [waNotes,   setWaNotes]   = useState('');
-  const [waError,   setWaError]   = useState('');
-  const [waSent,    setWaSent]    = useState(false);
+  const [waName,  setWaName]  = useState('');
+  const [waPhone, setWaPhone] = useState('');
+  const [waError, setWaError] = useState('');
+  const [waSent,  setWaSent]  = useState(false);
+  const [sending, setSending] = useState(false);
+  // Set when window.open was blocked — we then render a real <a> the customer
+  // can tap, instead of claiming the order was sent when it wasn't.
+  const [waFallbackUrl, setWaFallbackUrl] = useState('');
+  const [orderRef, setOrderRef] = useState('');
 
   const overlayRef = useRef(null);
 
@@ -49,60 +42,37 @@ export default function CartModal() {
 
   useEffect(() => {
     if (isOpen) {
-      // Jump to payment view if triggered via "Buy Now" from a product card
+      // Jump straight to the form when "Buy Now" was used from the lightbox
       if (checkoutView !== 'cart') { setView(checkoutView); setCheckoutView('cart'); }
     } else {
       setView('cart');
-      setWaSent(false);
-      setWaName(''); setWaPhone(''); setWaCounty('');
-      setWaCity(''); setWaAddress(''); setWaNotes(''); setWaError('');
+      setWaSent(false); setSending(false);
+      setWaName(''); setWaPhone(''); setWaError('');
+      setWaFallbackUrl(''); setOrderRef('');
     }
   }, [isOpen, checkoutView]);
 
   if (!isOpen) return null;
 
-  function handleShareLocation() {
-    getLocation(({ fullAddress }) => setWaAddress(fullAddress));
-  }
-
-  function handleWhatsAppSend(e) {
+  async function handleWhatsAppSend(e) {
     e.preventDefault();
     setWaError('');
-    if (!waName.trim())    { setWaError('Please enter your name.');           return; }
-    if (!waCounty)         { setWaError('Please select your county.');         return; }
-    if (!waCity.trim())    { setWaError('Please enter your city or town.');    return; }
-    if (!waAddress.trim()) { setWaError('Please enter your delivery address.'); return; }
+    if (!waName.trim()) { setWaError('Please enter your name.'); return; }
 
-    checkoutViaWhatsApp({
-      name: waName.trim(), phone: waPhone.trim(),
-      county: waCounty, city: waCity.trim(),
-      address: waAddress.trim(), notes: waNotes.trim(),
+    setSending(true);
+    const res = await checkoutViaWhatsApp({
+      name: waName.trim(),
+      phone: waPhone.trim(),
     });
-    setWaSent(true);
-  }
+    setSending(false);
+    setOrderRef(res.orderId || '');
 
-  function sendWaReceiptToCustomer() {
-    const clean = waPhone.trim().replace(/^0/, '254').replace(/^\+/, '');
-    const lines = items.map(i =>
-      `  • ${i.name} x${i.qty} — Ksh ${(i.price * i.qty).toLocaleString('en-KE')}`
-    );
-    const msg = [
-      '🧾 ORDER RECEIPT — Kamili',
-      '',
-      `Customer: ${waName.trim()}`,
-      `Delivering to: ${[waCity.trim(), waCounty].filter(Boolean).join(', ')}`,
-      '',
-      '📦 Items:',
-      ...lines,
-      '',
-      `💰 Total: Ksh ${total.toLocaleString('en-KE')}`,
-      '',
-      'We will contact you to confirm delivery. Thank you for shopping at Kamili! 🛍️',
-    ].join('\n');
-    window.open(`https://wa.me/${clean}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+    // Only claim the order was sent if WhatsApp actually opened.
+    // If the popup was blocked (common inside the Instagram browser) hand the
+    // customer a tappable link — an <a> always works where window.open doesn't.
+    if (res.opened) setWaSent(true);
+    else            setWaFallbackUrl(res.waUrl);
   }
-
-  const backLabel = view === 'cart' ? null : view === 'whatsapp' ? '← Cart' : '← Cart';
 
   return (
     <div className="cart-overlay" ref={overlayRef}
@@ -111,31 +81,44 @@ export default function CartModal() {
 
         <div className="cart-drawer__header">
           {view !== 'cart'
-            ? <button className="cart-drawer__back" onClick={() => { setView('cart'); setWaSent(false); }}>{backLabel}</button>
+            ? <button className="cart-drawer__back" onClick={() => {
+                setView('cart'); setWaSent(false); setWaFallbackUrl('');
+              }}>← Cart</button>
             : <h2 className="cart-drawer__title">Your Cart</h2>
           }
           <button className="cart-drawer__close" onClick={() => setIsOpen(false)}>✕</button>
         </div>
 
-        {/* ── M-Pesa flow ──────────────────────────────────────────── */}
-        {view === 'mpesa' && <MpesaCheckout onBack={() => setView('cart')} />}
-
-        {/* ── WhatsApp order form ──────────────────────────────────── */}
+        {/* ── Order sent ───────────────────────────────────────────── */}
         {view === 'whatsapp' && waSent && (
           <div className="wa-success">
             <div className="wa-success__icon">✓</div>
             <h3>Order Sent to Kamili!</h3>
-            <p className="wa-success__msg">We'll contact you shortly to confirm delivery.</p>
-            {waPhone.trim() && (
-              <button className="btn btn-whatsapp wa-submit" onClick={sendWaReceiptToCustomer}>
-                {WA_ICON} Send receipt to my WhatsApp
-              </button>
-            )}
+            <p className="wa-success__msg">
+              We'll reply on WhatsApp in a few minutes to confirm delivery and payment.
+            </p>
+            {orderRef && <p className="wa-order-ref">Your ref: <strong>{orderRef}</strong></p>}
             <button className="btn btn-gold" style={{ marginTop: 8 }} onClick={clearCart}>Done</button>
           </div>
         )}
 
-        {view === 'whatsapp' && !waSent && (
+        {/* ── Popup blocked fallback ───────────────────────────────── */}
+        {view === 'whatsapp' && !waSent && waFallbackUrl && (
+          <div className="wa-success">
+            <div className="wa-success__icon wa-success__icon--warn">!</div>
+            <h3>One more tap</h3>
+            <p className="wa-success__msg">
+              Your browser blocked the WhatsApp window. Your order is saved — tap below to send it.
+            </p>
+            <a className="btn btn-whatsapp wa-submit" href={waFallbackUrl}
+              target="_blank" rel="noopener noreferrer" onClick={() => setWaSent(true)}>
+              {WA_ICON} Open WhatsApp
+            </a>
+          </div>
+        )}
+
+        {/* ── WhatsApp order form ──────────────────────────────────── */}
+        {view === 'whatsapp' && !waSent && !waFallbackUrl && (
           <form className="wa-form-wrap" onSubmit={handleWhatsAppSend}>
             <div className="wa-form-scroll">
               <div className="wa-form__header">
@@ -148,61 +131,30 @@ export default function CartModal() {
                 <span> · {items.length} item{items.length !== 1 ? 's' : ''}</span>
               </div>
 
-              {/* Name */}
               <div className="form-group">
-                <label className="form-label">Your Name *</label>
-                <input type="text" placeholder="e.g. Jane Wanjiku"
+                <label className="form-label" htmlFor="wa-name">Your Name *</label>
+                <input id="wa-name" type="text" placeholder="e.g. Jane Wanjiku" autoComplete="name"
                   value={waName} onChange={e => setWaName(e.target.value)} required />
               </div>
 
-              {/* Phone */}
               <div className="form-group">
-                <label className="form-label">Phone <span className="wa-optional">(for delivery updates)</span></label>
-                <input type="tel" placeholder="0712 345 678" inputMode="numeric"
+                <label className="form-label" htmlFor="wa-phone">
+                  Phone <span className="wa-optional">(so we can call you back)</span>
+                </label>
+                <input id="wa-phone" type="tel" placeholder="0712 345 678"
+                  inputMode="numeric" autoComplete="tel"
                   value={waPhone} onChange={e => setWaPhone(e.target.value)} />
               </div>
 
-              {/* County + City */}
-              <div className="wa-row">
-                <div className="form-group">
-                  <label className="form-label">County *</label>
-                  <select value={waCounty} onChange={e => setWaCounty(e.target.value)} required>
-                    <option value="">Select</option>
-                    {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">City / Town *</label>
-                  <input type="text" placeholder="e.g. Westlands"
-                    value={waCity} onChange={e => setWaCity(e.target.value)} required />
-                </div>
-              </div>
-
-              {/* Address */}
-              <div className="form-group">
-                <div className="wa-addr-header">
-                  <label className="form-label">Delivery Address *</label>
-                  <button type="button" className="mpesa-loc-btn" onClick={handleShareLocation} disabled={locLoading}>
-                    {locLoading ? '…' : '📍 My location'}
-                  </button>
-                </div>
-                <textarea rows={2}
-                  placeholder="Street, building, apartment…"
-                  value={waAddress} onChange={e => setWaAddress(e.target.value)} required />
-              </div>
-
-              {/* Notes */}
-              <div className="form-group">
-                <label className="form-label">Notes <span className="wa-optional">(optional)</span></label>
-                <textarea rows={2} placeholder="Gate colour, landmark, preferred time…"
-                  value={waNotes} onChange={e => setWaNotes(e.target.value)} />
-              </div>
+              <p className="wa-reassure">
+                No payment now. We'll confirm your delivery location and price on WhatsApp first.
+              </p>
             </div>
 
             <div className="wa-form-footer">
               {waError && <p className="form-error" style={{ marginBottom: 10 }}>{waError}</p>}
-              <button type="submit" className="btn btn-whatsapp wa-submit">
-                {WA_ICON} Send Order to Kamili
+              <button type="submit" className="btn btn-whatsapp wa-submit" disabled={sending}>
+                {WA_ICON} {sending ? 'Sending…' : 'Send Order to Kamili'}
               </button>
               <p className="wa-note">Opens WhatsApp with your order details pre-filled</p>
             </div>
@@ -236,12 +188,13 @@ export default function CartModal() {
                         <p className="cart-item__name">{item.name}</p>
                         <p className="cart-item__price">Ksh {(item.price * item.qty).toLocaleString('en-KE')}</p>
                         <div className="cart-item__qty">
-                          <button onClick={() => updateQty(item.id, -1)}>−</button>
+                          <button onClick={() => updateQty(item.id, -1)} aria-label="Reduce quantity">−</button>
                           <span>{item.qty}</span>
-                          <button onClick={() => updateQty(item.id, +1)}>+</button>
+                          <button onClick={() => updateQty(item.id, +1)} aria-label="Increase quantity">+</button>
                         </div>
                       </div>
-                      <button className="cart-item__remove" onClick={() => removeItem(item.id)}>✕</button>
+                      <button className="cart-item__remove" onClick={() => removeItem(item.id)}
+                        aria-label={`Remove ${item.name}`}>✕</button>
                     </li>
                   ))}
                 </ul>
@@ -254,12 +207,11 @@ export default function CartModal() {
                   <span>Total</span>
                   <span>Ksh {total.toLocaleString('en-KE')}</span>
                 </div>
-                <button className="btn btn-gold cart-cta" onClick={() => setView('mpesa')}>
-                  Pay with M-Pesa
-                </button>
+                {/* Single checkout path — the one that actually works. */}
                 <button className="btn btn-whatsapp cart-cta" onClick={() => setView('whatsapp')}>
                   {WA_ICON} Order via WhatsApp
                 </button>
+                <p className="cart-reassure">Delivery is arranged on WhatsApp · pay on confirmation</p>
               </div>
             )}
           </>

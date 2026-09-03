@@ -151,3 +151,37 @@
 }
 .wa-success h3 { font-size: 1.2rem; font-weight: 600; }
 .wa-success__msg { font-size: 0.875rem; color: var(--muted); max-width: 260px; }
+
+/* ── WhatsApp-only checkout additions ──────────────────────────────── */
+/* Reassurance copy: the biggest objection is "am I paying a stranger now?"
+   Answering it inline, next to the button, is what keeps people moving. */
+.wa-reassure {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+  border-left: 2px solid var(--green);
+  padding-left: 10px;
+  margin-top: 4px;
+}
+.cart-reassure {
+  font-size: 11px;
+  text-align: center;
+  color: var(--muted);
+  margin-top: 8px;
+  letter-spacing: 0.02em;
+}
+.wa-order-ref {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.wa-order-ref strong {
+  font-family: monospace;
+  letter-spacing: 0.08em;
+  color: var(--text);
+}
+/* Amber, not green — this state means "not sent yet, one more tap". */
+.wa-success__icon--warn {
+  background: rgba(251, 191, 36, 0.14);
+  color: #fbbf24;
+}

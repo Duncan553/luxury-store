@@ -28,3 +28,13 @@
 }
 .filter-chip:hover { border-color: var(--border2); color: var(--text); }
 .filter-chip--active { border-color: var(--gold); color: var(--gold); background: var(--gold-dim); }
+
+/* Keyword sub-headline under the category H1. Muted so it reads as supporting
+   copy, not a competing heading. */
+.cat-hero__blurb {
+  font-size: 13.5px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+  margin-top: 8px;
+  
+}

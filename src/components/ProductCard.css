@@ -115,19 +115,23 @@
 .pcard__price { font-size: 13px; font-weight: 500; color: var(--gold); letter-spacing: 0.04em; }
 .pcard__oos   { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
 
+/* Was a fixed 34×34px circle sized for a single '+' glyph. Now the label
+   reads "Add to Cart" (fix for the mobile-invisible button above), so the
+   button has to size to real words, not a fixed square — auto width with
+   padding, small caps to match the site's other buttons. */
 .pcard__btn {
-  width: 34px; height: 34px;
+  width: auto; height: 34px; padding: 0 12px;
   border: 1px solid var(--border);
   background: none; color: var(--text);
-  font-size: 18px; cursor: pointer; line-height: 1;
+  font-size: 9.5px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase;
+  white-space: nowrap; cursor: pointer; line-height: 1;
   display: flex; align-items: center; justify-content: center;
-  transition: border-color 0.25s, background 0.25s, color 0.25s, transform 0.2s;
+  transition: border-color 0.25s, background 0.25s, color 0.25s;
 }
 .pcard__btn:hover {
   border-color: var(--gold);
   background: var(--gold);
-  color: var(--bg);
-  transform: rotate(90deg);
+  color: #fff;
 }
 /* Disabled OOS button — wider to fit text, no hover effects */
 .pcard__btn--oos {
@@ -144,4 +148,26 @@
 /* C2: vacation badge on product card */
 .pcard__badge--vacation {
   background: rgba(251,191,36,0.9); color: #000;
+}
+
+
+/* ── Touch devices ──────────────────────────────────────────────────
+   The whole overlay (Quick View / Add to Cart) only ever appeared on
+   :hover — phones and tablets have no hover, so the buy button was
+   invisible to almost every mobile visitor. hover:none matches any
+   touch-primary device regardless of screen width. */
+@media (hover: none) {
+  .pcard__overlay {
+    opacity: 1;
+    background: linear-gradient(to top, rgba(0,0,0,0.82) 0%, transparent 60%);
+  }
+  .pcard__overlay-btn { transform: translateY(0); }
+  /* Tapping the image already opens Quick View — don't duplicate the button. */
+  .pcard__overlay-btn--view { display: none; }
+}
+
+@media (max-width: 768px) {
+  /* Auto-width already fits "Add to Cart" at any screen size — this just
+     upsizes the tap target to a real 44px, the accessibility minimum. */
+  .pcard__btn { min-height: 44px; padding: 0 16px; font-size: 10.5px; }
 }

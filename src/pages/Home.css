@@ -332,3 +332,19 @@
   padding: 14px 24px; text-align: center; font-size: 14px; color: #fbbf24;
   font-family: var(--font-head); letter-spacing: 0.04em;
 }
+
+/* SEO sub-headline in the hero. It's a real <h2> carrying the keywords the
+   stylised headline can't, so it's sized like body copy, not like a heading. */
+.hero__seo-line {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  color: var(--muted);
+  max-width: 38ch;
+  margin-top: 14px;
+}
+@media (max-width: 768px) {
+  .hero__seo-line { font-size: 11px; }
+}

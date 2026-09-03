@@ -102,29 +102,62 @@ export function CartProvider({ children }) {
   const itemCount = items.reduce((s, i) => s + i.qty, 0);
   const total     = items.reduce((s, i) => s + i.price * i.qty, 0);
 
-  const checkoutViaWhatsApp = useCallback(({ name = '', phone = '', county = '', city = '', address = '', notes = '' } = {}) => {
-    if (!items.length) return;
+  // Saves the order to the DB FIRST, then opens WhatsApp.
+  //
+  // Why the order matters: WhatsApp is now the only checkout, and wa.me is a
+  // fire-and-forget link — if we don't write the row before opening it, an order
+  // that never reaches the chat leaves no trace at all. The DB row is the record;
+  // the chat is the conversation.
+  //
+  // Returns { saved, opened, orderId, waUrl } so the UI can tell the truth:
+  //   saved  = the row reached Supabase
+  //   opened = window.open actually returned a window (popup NOT blocked)
+  const checkoutViaWhatsApp = useCallback(async ({ name = '', phone = '' } = {}) => {
+    if (!items.length) return { saved: false, opened: false };
+
+    // Short human-readable ref the owner can quote in the chat: KML-M4X7K2P
+    const orderId = `KML-${Date.now().toString(36).toUpperCase()}`;
+
+    // cart_items is the snapshot the stock trigger reads when the order is
+    // marked paid, so the price/qty are frozen at order time — not looked up later.
+    const { error } = await supabase.from('payments').insert({
+      order_id:      orderId,
+      channel:       'whatsapp',
+      status:        'new',
+      customer_name: name  || null,
+      phone:         phone || null,
+      amount:        total,
+      cart_items:    items.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+    });
+
+    // A failed insert must never block the sale — the chat is the real order
+    // channel. Log it, report it upward, and still open WhatsApp.
+    if (error) console.error('[order insert]', error.message);
+
     const lines = items.map((i) =>
-      `  • ${i.status === 'Pre-Order' ? '[PRE-ORDER] ' : ''}${i.name} x${i.qty} — Ksh ${(i.price * i.qty).toLocaleString('en-KE')}`
+      `  \u2022 ${i.status === 'Pre-Order' ? '[PRE-ORDER] ' : ''}${i.name} x${i.qty} \u2014 Ksh ${(i.price * i.qty).toLocaleString('en-KE')}`
     );
-    const location = [city, county].filter(Boolean).join(', ');
     const message = [
-      '🛍️ NEW ORDER — Kamili',
+      `\ud83d\uded2 NEW ORDER ${orderId} \u2014 Kamili`,
       '',
-      name    ? `👤 Customer: ${name}`    : '',
-      phone   ? `📞 Phone: ${phone}`      : '',
-      location? `📍 Location: ${location}`: '',
-      address ? `🏠 Address: ${address}`  : '',
-      notes   ? `📝 Notes: ${notes}`      : '',
+      name  ? `\ud83d\udc64 Customer: ${name}` : '',
+      phone ? `\ud83d\udcde Phone: ${phone}`   : '',
       '',
-      '📦 Items:',
+      '\ud83d\udce6 Items:',
       ...lines,
       '',
-      `💰 Total: Ksh ${total.toLocaleString('en-KE')}`,
+      `\ud83d\udcb0 Total: Ksh ${total.toLocaleString('en-KE')}`,
       '',
-      'Please confirm and arrange delivery. Thank you!',
-    ].filter(l => l !== null && l !== undefined).join('\n').replace(/\n{3,}/g, '\n\n');
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank', 'noopener,noreferrer');
+      'Hi! I would like to order these. Where can you deliver?',
+    ].filter(l => l !== '').join('\n');
+
+    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+
+    // win === null means the popup was blocked. Extremely common inside the
+    // Instagram / Facebook in-app browsers, which is where most traffic arrives.
+    const win = window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+    return { saved: !error, opened: !!win, orderId, waUrl };
   }, [items, total]);
 
   return (

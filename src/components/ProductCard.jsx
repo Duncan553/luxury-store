@@ -14,9 +14,11 @@ export default function ProductCard({ product, onOpen }) {
   const addLabel  = vacationMode && !isPreOrder
     ? 'Pre-order — dispatches on reopen'
     : isPreOrder ? 'Pre-Order' : 'Add to Cart';
+  // Was a bare '+' glyph — meant nothing to a first-time visitor and was
+  // the ONLY mobile add-to-cart control before the hover-overlay fix above.
   const addShort  = vacationMode && !isPreOrder
     ? 'Pre-order'
-    : isPreOrder ? 'Pre-Order' : '+';
+    : isPreOrder ? 'Pre-Order' : 'Add to Cart';
 
   return (
     <article className={`pcard${isUnavailable ? ' pcard--oos' : ''}`}>
