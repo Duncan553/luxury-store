@@ -116,7 +116,7 @@ export default function MobileMenu({ open, onClose }) {
             <a className="mmenu__wa" href="https://wa.me/254114256994" target="_blank" rel="noopener noreferrer">
               {WA_ICON} Chat on WhatsApp
             </a>
-            <p className="mmenu__tag">Crafted for the discerning few.</p>
+            <p className="mmenu__tag">Bags, jewellery &amp; watches — Nairobi.</p>
           </motion.div>
         </motion.div>
       )}

@@ -39,28 +39,18 @@
   background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
 }
 
-/* Same white-stage + drop-shadow treatment as ProductCard.css's
-   .pcard__img--cutout, sized for the larger Quick View panel. Kept as a
-   near-duplicate rather than a shared class because the two components
-   have different base layouts (aspect-ratio box vs grid); the actual
-   values (gradient stops, shadow spread) are intentionally identical so a
-   product looks like the same object in the grid and in Quick View. */
+/* Plain white stage for a cutout — matches ProductCard.css's
+   .pcard__img--cutout. The drop-shadow/lift treatment this used to have
+   read as an artificial floating cardboard cutout rather than a real
+   product photo; a flat white background is what was actually asked for. */
 .lb-img-wrap--cutout {
-  background: linear-gradient(170deg, #fdfdfc 0%, #f2f1ee 62%, #e7e5e1 100%);
+  background: #ffffff;
   display: grid; place-items: center;
-  padding: 8%;
+  padding: 6%;
 }
 .lb-img-wrap--cutout .lb-img {
   width: 100%; height: 100%;
   object-fit: contain;                      /* never crop a cutout */
-  filter:
-    drop-shadow(0 14px 12px rgba(20,16,12,0.20))
-    drop-shadow(0 34px 40px rgba(20,16,12,0.11));
-}
-.lb-img-wrap--cutout:hover .lb-img { transform: scale(1.02); }
-@media (prefers-reduced-motion: reduce) {
-  .lb-img-wrap--cutout .lb-img,
-  .lb-img-wrap--cutout:hover .lb-img { transform: none; transition: none; }
 }
 .lb-badge {
   position: absolute; top: 16px; left: 16px;

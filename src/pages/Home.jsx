@@ -104,7 +104,7 @@ export default function Home() {
   // what we sell, where we are, and how ordering works.
   useSeo({
     title: 'Luxury Bags, Jewellery & Watches in Nairobi',
-    description: 'Handpicked designer bags, jewellery and watches, delivered across Kenya. Order on WhatsApp — we reply in minutes.',
+    description: 'Quality bags, jewellery and watches, delivered across Kenya. Order on WhatsApp — we reply in minutes.',
     path: '/',
   });
 
@@ -195,7 +195,7 @@ export default function Home() {
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, ease, delay: 1.2 }}>
-                Handpicked bags, jewelry &amp; watches<br />for those who need no introduction.
+                Quality bags, jewelry &amp; watches<br />for those who need no introduction.
               </motion.p>
 
               {/* The hero art sells the feeling; this line sells the search term.
@@ -277,15 +277,15 @@ export default function Home() {
       <section className="editorial section">
         <div className="container editorial__inner">
           <Reveal className="editorial__text" delay={0.1}>
-            <span className="section-eyebrow">The Kamili Standard</span>
+            <span className="section-eyebrow">Why Kamili</span>
             <h2 className="editorial__heading">
-              Each piece tells<br />a story.
+              Real pieces,<br />sorted fast.
             </h2>
             <p className="editorial__body">
-              We don't curate products. We curate experiences.
-              Every bag, watch and jewel in our collection is personally
-              selected — held to a standard where craftsmanship meets
-              African identity.
+              Bags, jewelry and watches, sourced and sold from Nairobi.
+              Message us on WhatsApp, we confirm what's available and
+              arrange delivery — no account, no waiting on a courier
+              you can't reach.
             </p>
             {/* Both numbers are live, not written-in: productCount comes from
                 an exact DB count (see the fetch above), categories.length
@@ -377,8 +377,8 @@ export default function Home() {
               <div className="bento-card__overlay" />
               <div className="bento-card__body">
                 <span className="bento-card__icon">✦</span>
-                <h3 className="bento-card__title">Curated Selection</h3>
-                <p className="bento-card__desc">Each piece handpicked for quality and character. Nothing generic ever touches our shelves.</p>
+                <h3 className="bento-card__title">Real Photos, Real Stock</h3>
+                <p className="bento-card__desc">What you see is what's actually available — no stock-photo swaps.</p>
               </div>
             </motion.div>
 
@@ -391,8 +391,8 @@ export default function Home() {
 
             <motion.div variants={itemV} className="bento-card bento-card--sm">
               <span className="bento-card__icon">◎</span>
-              <h3 className="bento-card__title">Kenya Proud</h3>
-              <p className="bento-card__desc">African luxury held to a global standard.</p>
+              <h3 className="bento-card__title">Nairobi-Based</h3>
+              <p className="bento-card__desc">Delivery arranged across Kenya from a local WhatsApp number.</p>
             </motion.div>
 
             <motion.div variants={itemV} className="bento-card bento-card--sm bento-card--dark">

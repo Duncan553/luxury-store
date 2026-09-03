@@ -68,7 +68,7 @@ export default function SettingsTab({
           </label>
           <textarea
             rows={2}
-            placeholder="e.g. Quiet luxury, curated in Nairobi. DM to order."
+            placeholder="e.g. Bags, jewellery & watches, Nairobi. DM to order."
             value={settings.tagline ?? ''}
             onChange={e => setSettings(s => ({ ...s, tagline: e.target.value }))}
           />

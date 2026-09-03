@@ -37,30 +37,27 @@ function ReviewCard({ review }) {
 }
 
 /* ── Collection spotlights ─────────────────────────────────────────── */
+// Matches the real categories in the products table (Bags, Jewelry,
+// Watches) — an earlier version had a fourth "Accessories" card
+// (scarves/belts/sunglasses) describing a product line that was never
+// actually in the catalogue. Removed rather than reworded, same as the
+// craftsmanship-narrative copy below: don't describe what isn't real.
 const COLLECTIONS = [
   {
     label: 'Watches',
-    headline: 'Time, elevated.',
-    body: 'Each timepiece is chosen not for name alone, but for the story it keeps. Precise mechanisms. Understated dials. Wrists that speak before mouths do.',
+    headline: 'Time, on your wrist.',
+    body: 'Sourced pieces, checked before they ship. Message us on WhatsApp for photos of the specific unit before you commit.',
     img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-    tag: 'Horology · Precision',
+    tag: 'Watches',
     align: 'right',
-  },
-  {
-    label: 'Accessories',
-    headline: 'Details that define.',
-    body: 'Scarves, belts, sunglasses — the small gestures that complete the silhouette. Nothing disposable. Nothing accidental. Everything intentional.',
-    img: 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=900&q=80',
-    tag: 'Accessories · Edit',
-    align: 'left',
   },
   {
     label: 'Jewellery',
-    headline: 'Adornment as identity.',
-    body: 'Brass, gold plate, natural stone. Each piece draws from East African craft tradition and wears it into the modern world without apology.',
+    headline: 'Pieces worth wearing daily.',
+    body: 'Rings, bangles, pendants — bought in, sold on. We tell you what we know about each piece; we don\'t pretend to have made it.',
     img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80',
-    tag: 'Jewellery · Craft',
-    align: 'right',
+    tag: 'Jewellery',
+    align: 'left',
   },
 ];
 
@@ -77,8 +74,8 @@ export default function About() {
 
   // The aggregate rating here is what can put review stars in Google results.
   useSeo({
-    title: 'About Kamili — Curated Luxury from Nairobi',
-    description: 'Kamili curates luxury bags, jewellery and watches in Nairobi. Read customer reviews, find our contact details and opening hours.',
+    title: 'About Kamili — Bags, Jewellery & Watches from Nairobi',
+    description: 'Kamili sells bags, jewellery and watches from Nairobi. Read customer reviews, find our contact details and opening hours.',
     path: '/about',
     jsonLd: reviewJsonLd(reviews),
   });
@@ -153,7 +150,7 @@ export default function About() {
         <div className="container">
           <p className="section-eyebrow">Our Story</p>
           <h1 className="about-hero__title">Kamili</h1>
-          <p className="about-hero__sub">Born in Nairobi. Worn by the World.</p>
+          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp, delivered across Kenya.</p>
         </div>
       </div>
 
@@ -161,16 +158,16 @@ export default function About() {
       <section className="section">
         <div className="container about-story">
           <div className="about-story__text reveal">
-            <h2 className="about-story__heading">Crafted here.<br />Coveted everywhere.</h2>
+            <h2 className="about-story__heading">Sourced smart.<br />Sold straight.</h2>
             <p>
-              Kamili was born from a quiet conviction: that African craftsmanship and vision belong
-              at the very top of global luxury. Not as inspiration to be borrowed, but as the
-              standard being set. We curate pieces with structured elegance — bags with presence,
-              jewellery with intention, watches that measure more than time.
+              Kamili sells bags, jewellery and watches out of Nairobi. We don't make
+              what we sell, and we don't pretend to — the value is in sourcing real
+              pieces and being straightforward about what you're buying, before you
+              buy it.
             </p>
             <p style={{ marginTop: 16 }}>
-              Every order is fulfilled personally. Every piece is chosen deliberately.
-              We don't follow trends — we document a movement.
+              Every order goes through a real person on WhatsApp, not a form. Ask
+              questions before you pay — that's the whole model.
             </p>
             <div className="about-origin-tag reveal reveal-delay-1">
               <span>✦</span> Nairobi, Kenya — Est. 2024

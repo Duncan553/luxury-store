@@ -26,20 +26,14 @@
 }
 
 /* Image
-   ── White-stage + drop-shadow treatment ──────────────────────────────
-   For a background-removed cutout (image_type: 'cutout', a transparent
-   PNG), swap the dark card background for a lit white stage and give the
-   product a real contact shadow — a soft, tight dark ellipse right under
-   the object, widening and fading as it moves away. That single cue is
-   what reads as "resting in space" rather than "pasted on a card".
-
-   Two things this depends on:
-   - filter: drop-shadow(), not box-shadow. box-shadow follows the
-     element's rectangle; on a transparent PNG that draws a shadow around
-     an invisible box. drop-shadow() traces the actual alpha silhouette.
-   - object-fit: contain, not cover — a cutout must never be cropped.
-   Photos without a cutout (image_type !== 'cutout') keep the original
-   dark card + cover-fit treatment untouched below. */
+   Cutout photos (background removed) get a plain white stage — no
+   drop-shadow/lift/perspective. That treatment read as an artificial
+   floating cardboard cutout rather than a real product photo, so it's
+   gone; a flat white background is what marketplace listings actually
+   look like, and it's what was asked for.
+   object-fit: contain (not cover) still matters — a cutout must never be
+   cropped. Photos without a cutout keep the original dark card + cover-fit
+   treatment untouched below. */
 .pcard__img {
   position: relative; overflow: hidden;
   background: var(--surface2);
@@ -51,31 +45,17 @@
 .pcard__img-placeholder { width: 100%; height: 100%; background: var(--surface3); }
 
 .pcard__img--cutout {
-  background: linear-gradient(170deg, #fdfdfc 0%, #f2f1ee 62%, #e7e5e1 100%);
-  perspective: 900px;
+  background: #ffffff;
   display: grid; place-items: center;
-  padding: 10%;
+  padding: 8%;
 }
 .pcard__img--cutout .img-cover {
   width: 100%; height: 100%;
   object-fit: contain;                      /* never crop a cutout */
-  transform: translateZ(0);
-  filter:
-    drop-shadow(0 10px 8px rgba(20,16,12,0.22))
-    drop-shadow(0 26px 30px rgba(20,16,12,0.12));
-  transition: transform 0.5s cubic-bezier(0.2,0.7,0.3,1), filter 0.5s ease;
 }
-/* Hover: the product lifts and the shadow drops away + softens — light
-   behaves this way, so the eye reads the gap as height, not distortion. */
-.pcard:hover .pcard__img--cutout .img-cover {
-  transform: translateZ(0) translateY(-6px) rotateX(3deg) scale(1.03);
-  filter:
-    drop-shadow(0 18px 14px rgba(20,16,12,0.18))
-    drop-shadow(0 40px 44px rgba(20,16,12,0.10));
-}
+.pcard:hover .pcard__img--cutout .img-cover { transform: scale(1.04); }
 @media (prefers-reduced-motion: reduce) {
-  .pcard__img--cutout .img-cover,
-  .pcard:hover .pcard__img--cutout .img-cover { transform: none; transition: none; }
+  .pcard:hover .pcard__img--cutout .img-cover { transform: none; }
 }
 
 /* Badge */

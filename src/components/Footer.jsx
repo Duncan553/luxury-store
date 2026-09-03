@@ -60,7 +60,7 @@ export default function Footer() {
       <div className="footer__inner container">
         <div className="footer__brand">
           <span className="footer__logo">KAMILI</span>
-          <p className="footer__tagline">Crafted for the discerning few.</p>
+          <p className="footer__tagline">Bags, jewellery &amp; watches — Nairobi.</p>
         </div>
 
         <nav className="footer__nav">
