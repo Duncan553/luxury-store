@@ -1,3 +1,4 @@
+import { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -9,11 +10,17 @@ import LoadingScreen        from './components/LoadingScreen';
 import ScrollProgress       from './components/ScrollProgress';
 import InAppBrowserBanner   from './components/InAppBrowserBanner';
 
-import Home           from './pages/Home';
-import Category       from './pages/Category';
-import About          from './pages/About';
-import AdminLogin     from './pages/AdminLogin';
-import AdminDashboard from './pages/AdminDashboard';
+// Home stays a normal import — it's the page almost every visitor lands on
+// first, so it should be in the same request as the app shell, not behind
+// an extra round-trip. Everything else is lazy: a customer browsing the
+// storefront was previously downloading the full admin dashboard's code
+// (AdminLogin + AdminDashboard's shell) on their very first page load, even
+// though the overwhelming majority of visitors never touch /admin at all.
+import Home            from './pages/Home';
+const Category         = lazy(() => import('./pages/Category'));
+const About            = lazy(() => import('./pages/About'));
+const AdminLogin       = lazy(() => import('./pages/AdminLogin'));
+const AdminDashboard   = lazy(() => import('./pages/AdminDashboard'));
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -30,15 +37,21 @@ function AppShell() {
       <Navbar />
       <CartModal />
       <main>
-        <Routes>
-          <Route path="/"               element={<Home />} />
-          <Route path="/category/:name" element={<Category />} />
-          <Route path="/about"          element={<About />} />
-          <Route path="/admin/login"    element={<AdminLogin />} />
-          <Route path="/admin/dashboard"
-            element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
-          <Route path="*"              element={<Navigate to="/" replace />} />
-        </Routes>
+        {/* Blank fallback, not the LoadingScreen splash again — a lazy
+            chunk is usually cached and loads in well under 100ms after the
+            first visit; re-showing a branded splash on every category
+            click would be a regression, not a loading state. */}
+        <Suspense fallback={null}>
+          <Routes>
+            <Route path="/"               element={<Home />} />
+            <Route path="/category/:name" element={<Category />} />
+            <Route path="/about"          element={<About />} />
+            <Route path="/admin/login"    element={<AdminLogin />} />
+            <Route path="/admin/dashboard"
+              element={<PrivateRoute><AdminDashboard /></PrivateRoute>} />
+            <Route path="*"              element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
       </main>
       <Footer />
     </>
