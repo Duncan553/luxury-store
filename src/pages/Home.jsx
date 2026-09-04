@@ -261,8 +261,11 @@ export default function Home() {
         </motion.div>
 
         {/* Corner decorations */}
-        <div className="hero__corner hero__corner--tl" />
-        <div className="hero__corner hero__corner--br" />
+        {/* Removed: two decorative corner brackets (top-left, bottom-right).
+            Pure ornament — they framed the hero without marking anything
+            real, and the top-left one sat right beside the logo where it
+            read as a stray artefact. Both go rather than just the left one:
+            half a frame looks like a rendering fault, not a choice. */}
       </section>
 
       {/* ═══ CATEGORIES ═════════════════════════════════════════════════ */}

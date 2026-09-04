@@ -59,11 +59,6 @@
 }
 
 /* Corner accents */
-.hero__corner {
-  position: absolute; width: 60px; height: 60px; pointer-events: none; z-index: 2;
-}
-.hero__corner--tl { top: 40px; left: 40px; border-top: 1px solid rgba(220,20,60,0.3); border-left: 1px solid rgba(220,20,60,0.3); }
-.hero__corner--br { bottom: 40px; right: 40px; border-bottom: 1px solid rgba(220,20,60,0.3); border-right: 1px solid rgba(220,20,60,0.3); }
 
 /* Content */
 .hero__content {
@@ -363,8 +358,7 @@
   .cat-grid { grid-template-columns: 1fr; grid-template-rows: auto; }
   .cat-card--featured { grid-row: span 1; }
   .cat-card__inner { height: auto; aspect-ratio: 4/3; }
-  .hero__corner { display: none; }
-  .hero__heading--outline { display: none; }
+    .hero__heading--outline { display: none; }
   .bento-grid { grid-template-columns: 1fr; }
   .bento-card--big { grid-column: span 1; }
   .section-header { flex-direction: column; align-items: flex-start; }

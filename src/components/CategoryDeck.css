@@ -13,6 +13,12 @@
   --rot: 26deg;      /* 3D turn applied per step out from centre */
   --scale-step: 0.13;
   outline: none;
+  /* Tells the browser up front that this element handles horizontal
+     gestures and the page keeps the vertical ones. Without it the browser
+     has to wait to see which direction the finger goes before it can scroll
+     — that hesitation at the top of every swipe is most of what "hanging"
+     feels like on a phone. */
+  touch-action: pan-y;
 }
 .deck:focus-visible { outline: 1px solid var(--gold); outline-offset: 12px; }
 
@@ -27,6 +33,9 @@
   perspective: 1400px;
   perspective-origin: 50% 40%;
   margin-bottom: 20px;
+  /* Nothing inside the stage affects layout outside it, so the browser can
+     skip re-checking the rest of the page while cards move. */
+  contain: layout paint;
 }
 
 .deck__card {
@@ -35,15 +44,30 @@
   width: var(--card-w);
   transform-style: preserve-3d;
   /* All five properties animate from the single --d value. */
+  /* --drag is written by the pointer handler on every frame, so the deck
+     tracks the finger. It's part of the same transform, which means the
+     drag and the settle animate the same compositor property instead of
+     fighting each other. */
   transform:
-    translateX(calc(var(--d) * var(--step)))
+    translate3d(calc(var(--d) * var(--step) + var(--drag, 0px)), 0, 0)
     rotateY(calc(var(--d) * var(--rot) * -1))
     scale(calc(1 - min(abs(var(--d)), 2) * var(--scale-step)));
   opacity: calc(1 - min(abs(var(--d)), 2) * 0.34);
   transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
               opacity 0.5s ease;
-  will-change: transform, opacity;
+  /* transform and opacity are the only two properties that animate purely
+     on the compositor — no layout, no paint. Everything that moves here is
+     one of those two, which is what keeps it at frame rate on a cheap
+     Android as well as a laptop. */
+  will-change: transform;
+  backface-visibility: hidden;
 }
+
+/* While the finger is down there is no transition: each frame must land
+   exactly where the finger is. With a transition still running, every
+   frame restarts a 0.62s ease toward a target that has already moved and
+   the deck drags behind the finger. */
+.deck__stage.is-dragging .deck__card { transition: none; }
 /* abs() is recent; without it the calc above silently fails and every card
    lands on top of the others. This fallback keeps the fan working: same
    shape, applied per offset instead of computed. */
@@ -94,12 +118,29 @@
   color: var(--muted2);
 }
 
-/* Only the front card gets the lift. A shadow under a card that's turned
-   away reads as a mistake. */
-.deck__card.is-active .deck__img {
+/* Only the front card gets the lift — a shadow under a card that's turned
+   away reads as a mistake.
+
+   The shadow is painted ONCE on a pseudo-element that exists on every card,
+   and only its opacity changes. Putting box-shadow directly on the active
+   card meant that every time the front card changed, a large blurred region
+   had to be repainted — and a blurred shadow is one of the most expensive
+   things to repaint mid-animation. Opacity costs nothing: the compositor
+   already has the layer. */
+.deck__hit { position: relative; }
+.deck__hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
   box-shadow: 0 26px 60px rgba(0, 0, 0, 0.62);
-  border-color: rgba(255, 255, 255, 0.16);
+  opacity: 0;
+  transition: opacity 0.45s ease;
+  pointer-events: none;
+  z-index: -1;
 }
+.deck__card.is-active .deck__hit::after { opacity: 1; }
+.deck__card.is-active .deck__img { border-color: rgba(255, 255, 255, 0.16); }
 
 .deck__meta {
   display: flex;

@@ -25,7 +25,7 @@
 // the full list also still lives in the nav and on the homepage, which is
 // what stops this being the only route in.
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import './CategoryDeck.css';
 
@@ -47,8 +47,12 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
   // Once the visitor drives, autoplay is done for the session.
   const [userTook, setUserTook] = useState(false);
   const reduce = useReducedMotion();
-  const navigate = useNavigate();
-  const touchX = useRef(null);
+  // Drag state lives in refs, not state: it changes every frame and must
+  // never trigger a React render.
+  const dragging = useRef(false);
+  const startX   = useRef(0);
+  const dx       = useRef(0);
+  const stageRef = useRef(null);
 
   const n = categories.length;
 
@@ -73,13 +77,51 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
     if (e.key === 'ArrowRight') { e.preventDefault(); take(active + 1); }
   }
 
-  // Swipe: the only way this is usable one-handed on a phone.
-  function onTouchStart(e) { touchX.current = e.touches[0].clientX; }
-  function onTouchEnd(e) {
-    if (touchX.current == null) return;
-    const dx = e.changedTouches[0].clientX - touchX.current;
-    if (Math.abs(dx) > 40) take(active + (dx < 0 ? 1 : -1));
-    touchX.current = null;
+  // ── Drag ────────────────────────────────────────────────────────────
+  // The deck follows the finger (and the mouse) instead of sitting still
+  // and then jumping when you let go. Two details make it feel smooth
+  // rather than merely functional:
+  //
+  // 1. The drag offset is written straight to a CSS custom property on the
+  //    DOM node, NOT into React state. State would re-render the whole deck
+  //    on every pointermove — dozens of renders a second, each one work the
+  //    browser has to finish before it can paint. Writing one custom
+  //    property changes a value the compositor already animates.
+  //
+  // 2. Transitions are switched off while dragging. Otherwise every frame
+  //    starts a new 0.62s ease toward a target that has already moved, and
+  //    the deck lags behind the finger like it's underwater.
+  //
+  // Pointer events cover touch and mouse in one path, so the laptop gets
+  // drag-to-browse too rather than arrows only.
+  function onPointerDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragging.current = true;
+    startX.current = e.clientX;
+    dx.current = 0;
+    stageRef.current?.classList.add('is-dragging');
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  }
+
+  function onPointerMove(e) {
+    if (!dragging.current) return;
+    dx.current = e.clientX - startX.current;
+    // Rubber-band past the ends so the deck resists rather than tearing off.
+    stageRef.current?.style.setProperty('--drag', `${dx.current * 0.9}px`);
+  }
+
+  function onPointerUp() {
+    if (!dragging.current) return;
+    dragging.current = false;
+    const stage = stageRef.current;
+    stage?.classList.remove('is-dragging');
+    stage?.style.setProperty('--drag', '0px');
+    // A short flick counts as much as a long drag; threshold scales with the
+    // card so it feels the same on a phone and a laptop.
+    const threshold = (stage?.offsetWidth || 300) * 0.12;
+    if (Math.abs(dx.current) > threshold) take(active + (dx.current < 0 ? 1 : -1));
+    else if (Math.abs(dx.current) > 4) setUserTook(true); // touched it, even if it didn't move
+    dx.current = 0;
   }
 
   return (
@@ -89,11 +131,13 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
       aria-roledescription="carousel"
       aria-label="Product categories"
       onKeyDown={onKey}
-      onTouchStart={onTouchStart}
-      onTouchEnd={onTouchEnd}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
       tabIndex={0}
     >
-      <div className="deck__stage">
+      <div className="deck__stage" ref={stageRef}>
         {categories.map((c, i) => {
           // Signed distance from the active card, wrapped so the deck looks
           // continuous rather than snapping when it passes the last item.
