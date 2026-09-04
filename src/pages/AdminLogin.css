@@ -1,75 +1,96 @@
 /* pages/AdminLogin.css */
+
+/* The storefront has atmosphere (layered radial gradients in the hero);
+   this page was flat --bg, which made it read as an unfinished utility
+   screen bolted onto a different site. Same gradient language, dialled
+   well down — it's a login, not a landing page. */
 .admin-login {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg);
   padding: 24px;
+  background:
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(200,30,60,0.10) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(130,85,20,0.06) 0%, transparent 55%),
+    var(--bg);
 }
+
 .admin-login__card {
   width: 100%;
   max-width: 400px;
-  padding: 48px 40px;
+  padding: 44px 40px;
   background: var(--surface);
   border: 1px solid var(--border);
 }
+
+.admin-login__brand {
+  font-family: var(--font-head);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--text);
+  display: block;
+  margin-bottom: 22px;
+}
+
 .admin-login__title {
   font-family: var(--font-head);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--gold);
   margin-bottom: 6px;
 }
 .admin-login__sub {
   font-size: 13px;
   color: var(--muted);
-  margin-bottom: 36px;
+  margin-bottom: 32px;
 }
+
 .admin-login__form {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Google button */
-.btn-google {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 13px 20px;
-  background: #fff;
-  color: #3c3c3c;
-  border: 1px solid #ddd;
-  font-size: 13px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  transition: background 0.2s, border-color 0.2s;
-  margin-bottom: 4px;
+/* A login is one of the few places worth an explicit focus ring beyond the
+   global one — it's the only interactive thing on the page. */
+.admin-login__form input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(200,30,60,0.12);
 }
-.btn-google:hover:not(:disabled) { background: #f5f5f5; border-color: #bbb; }
-.btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
 
-/* Divider */
-.admin-login__divider {
+/* Error was bare red text with no container, easy to miss right after a
+   failed attempt. */
+.admin-login__error {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 20px 0;
-  color: var(--muted2);
-  font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  align-items: flex-start;
+  gap: 8px;
+  background: rgba(239,68,68,0.08);
+  border: 1px solid rgba(239,68,68,0.25);
+  color: #f87171;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 10px 12px;
+  margin: 0;
 }
-.admin-login__divider::before,
-.admin-login__divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
+
+/* Nothing on this page linked back to the storefront — an admin landing
+   here had to hand-edit the URL to get out. */
+.admin-login__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 24px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  transition: color 0.2s, gap 0.2s var(--ease);
+}
+.admin-login__back:hover { color: var(--gold-light); gap: 10px; }
+
+@media (max-width: 480px) {
+  .admin-login__card { padding: 32px 24px; }
 }

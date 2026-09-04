@@ -34,16 +34,15 @@ export function AuthProvider({ children }) {
     ? READONLY_EMAILS.includes((user.email || '').toLowerCase())
     : false;
 
-  const login          = (email, password) => supabase.auth.signInWithPassword({ email, password });
-  const loginWithGoogle = () =>
-    supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${window.location.origin}/admin/dashboard` },
-    });
+  // loginWithGoogle removed along with the login page's Google button:
+  // this project's Supabase auth settings have the google provider
+  // disabled (email is the only one enabled), so it could only ever
+  // return "provider is not enabled".
+  const login  = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const logout = () => supabase.auth.signOut();
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, logout, isReadOnly }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isReadOnly }}>
       {children}
     </AuthContext.Provider>
   );

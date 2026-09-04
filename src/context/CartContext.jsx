@@ -3,8 +3,21 @@ import { supabase } from '../lib/supabase';
 
 const CartContext = createContext(null);
 
-const WHATSAPP_NUMBER = '254114256994';
-const STORAGE_KEY     = 'kamili_cart';
+// Fallback only. The live number comes from store_settings.whatsapp (admin
+// → Settings), fetched below. Before this, the Settings field only changed
+// the About page's contact card while checkout stayed pinned to this
+// constant — so changing the WhatsApp number in the admin would have sent
+// every order to the old line while the site advertised the new one.
+const WHATSAPP_FALLBACK = '254114256994';
+const STORAGE_KEY       = 'kamili_cart';
+
+// 0712345678 / +254 712 345 678 / 254712345678 all -> 254712345678
+export function normaliseWaNumber(raw) {
+  const digits = (raw || '').replace(/\D/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('254')) return digits;
+  return '254' + digits.replace(/^0+/, '');
+}
 
 // B2: Try localStorage first, fall back to sessionStorage.
 // Instagram/Facebook in-app browsers sometimes wipe localStorage between page
@@ -45,6 +58,9 @@ export function CartProvider({ children }) {
   // Propagated here so ProductCard reads it without a per-card Supabase query.
   const [vacationMode,    setVacationMode]    = useState(false);
   const [vacationMessage, setVacationMessage] = useState('');
+  // Live WhatsApp number from admin → Settings; falls back to the constant
+  // above only if the field is empty.
+  const [waNumber,        setWaNumber]        = useState(WHATSAPP_FALLBACK);
 
   // Persist to both storage layers on every cart change.
   useEffect(() => {
@@ -56,13 +72,15 @@ export function CartProvider({ children }) {
   useEffect(() => {
     supabase
       .from('store_settings')
-      .select('vacation_mode, vacation_message')
+      .select('vacation_mode, vacation_message, whatsapp')
       .eq('id', 'singleton')
       .single()
       .then(({ data }) => {
         if (data) {
           setVacationMode(!!data.vacation_mode);
           setVacationMessage(data.vacation_message || '');
+          const n = normaliseWaNumber(data.whatsapp);
+          if (n) setWaNumber(n);
         }
       });
   }, []);
@@ -172,14 +190,14 @@ export function CartProvider({ children }) {
       'Hi! I would like to order these. Where can you deliver?',
     ].filter(l => l !== '').join('\n');
 
-    const waUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
+    const waUrl = `https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`;
 
     // win === null means the popup was blocked. Extremely common inside the
     // Instagram / Facebook in-app browsers, which is where most traffic arrives.
     const win = window.open(waUrl, '_blank', 'noopener,noreferrer');
 
     return { saved: !error, opened: !!win, orderId, waUrl };
-  }, [items, total]);
+  }, [items, total, waNumber]);
 
   return (
     <CartContext.Provider value={{
@@ -189,7 +207,7 @@ export function CartProvider({ children }) {
       openCheckout,
       addItem, removeItem, updateQty,
       clearCart, checkoutViaWhatsApp,
-      vacationMode, vacationMessage,
+      vacationMode, vacationMessage, waNumber,
     }}>
       {children}
     </CartContext.Provider>

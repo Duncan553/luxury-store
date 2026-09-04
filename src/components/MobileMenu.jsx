@@ -26,6 +26,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { NavLink } from 'react-router-dom';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useCart } from '../context/CartContext';
 import './MobileMenu.css';
 
 const WA_ICON = (
@@ -49,6 +50,9 @@ const linkV = {
 };
 
 export default function MobileMenu({ open, onClose }) {
+  // Was a hardcoded wa.me/254114256994. Same bug as checkout had: changing
+  // the number in admin → Settings left this link pointing at the old line.
+  const { waNumber } = useCart();
   // WCAG 2.2 expects motion like this to back off when the OS says so —
   // framer-motion's own hook, so it needs no extra wiring.
   const reduce = useReducedMotion();
@@ -113,7 +117,7 @@ export default function MobileMenu({ open, onClose }) {
             {/* Frequent task, kept one tap away rather than buried further —
                 a shop selling through WhatsApp should never make "how do I
                 order" harder to find than the catalogue itself. */}
-            <a className="mmenu__wa" href="https://wa.me/254114256994" target="_blank" rel="noopener noreferrer">
+            <a className="mmenu__wa" href={`https://wa.me/${waNumber}`} target="_blank" rel="noopener noreferrer">
               {WA_ICON} Chat on WhatsApp
             </a>
             <p className="mmenu__tag">Bags, jewellery &amp; watches — Nairobi.</p>
