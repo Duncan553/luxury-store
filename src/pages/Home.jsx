@@ -92,7 +92,6 @@ const CAT_BLURBS = {
 };
 
 export default function Home() {
-  const [categories,       setCategories]       = useState([]);
   const [loading,          setLoading]          = useState(true);
   // Real, live count of what's actually in stock right now — shown in the
   // stats strip below instead of a hard-coded number. See the fetch below:
@@ -103,7 +102,9 @@ export default function Home() {
   // side — cheaper than four count queries and small enough not to matter.
   const [catCounts,        setCatCounts]        = useState({});
   // C2: vacation mode — fetched via CartContext (already fetches store_settings on mount)
-  const { vacationMode, vacationMessage } = useCart();
+  // categories come from CartContext, which already fetches them for the
+  // navbar — this page duplicating that query was one wasted round trip.
+  const { vacationMode, vacationMessage, categories } = useCart();
 
 
   // Homepage head. Written for a person scanning a Google result, not a crawler:
@@ -119,24 +120,34 @@ export default function Home() {
   const heroOp       = useTransform(scrollY, [0, 500], [1, 0]);
   const bgScale      = useTransform(scrollY, [0, 800], [1, 1.08]);
 
+  // ONE query, not three.
+  //
+  // This page used to make three of its own requests: categories (already
+  // fetched by CartContext for the nav, so a straight duplicate), a
+  // head-count of in-stock products, and a second full pass over products
+  // to count them per category. Every one of those is a separate round
+  // trip to Supabase, and measured from this connection a round trip costs
+  // roughly half a second — the request time, not the query time, is what
+  // a customer on mobile data actually waits for.
+  //
+  // Categories now come from CartContext (see useCart above). The two
+  // product queries collapse into one: `category` and `status` for every
+  // row is a few hundred bytes at this catalogue size, and both numbers
+  // are derived from it in memory.
   useEffect(() => {
-    supabase.from('categories').select('*').order('created_at')
-      .then(({ data }) => { if (data) setCategories(data); });
     setLoading(false);
-    // Live stock count for the stats strip — was previously a hard-coded
-    // "500+" nobody could verify against the real catalogue.
-    supabase.from('products').select('id', { count: 'exact', head: true })
-      .neq('status', 'Out of Stock')
-      .then(({ count }) => { if (typeof count === 'number') setProductCount(count); });
-    supabase.from('products').select('category')
+    supabase.from('products').select('category, status')
       .then(({ data }) => {
         if (!data) return;
         const by = {};
+        let inStock = 0;
         data.forEach((p) => {
           const slug = (p.category || '').toLowerCase().replace(/\s+/g, '-');
           by[slug] = (by[slug] || 0) + 1;
+          if (p.status !== 'Out of Stock') inStock += 1;
         });
         setCatCounts(by);
+        setProductCount(inStock);
       });
   }, []);
 
