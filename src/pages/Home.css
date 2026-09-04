@@ -223,18 +223,53 @@
 .cat-card__inner:hover .cat-card__arrow { opacity: 1; transform: translateX(0); }
 
 /* ─── Editorial split ────────────────────────────────────────────────── */
+/* Magazine treatment, same principles as the About spread.
+
+   ASYMMETRIC, not 1fr 1fr. Two equal halves give the copy and the picture
+   identical weight, so neither leads and the section reads as a slab. The
+   text column takes the wider track; the image supports it and is offset
+   down so the headline opens the section on its own baseline.
+
+   align-items moves from center to start for the same reason: vertically
+   centring two unequal columns leaves ragged space above and below both. */
 .editorial__inner {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 80px; align-items: center;
+  display: grid; grid-template-columns: 1fr;
+  gap: 32px; align-items: start;
+}
+@media (min-width: 860px) {
+  .editorial__inner { grid-template-columns: 1.25fr 1fr; gap: 72px; }
+  .editorial__visual { margin-top: 64px; }
 }
 .editorial__heading {
   font-family: var(--font-head); font-size: clamp(2.5rem, 5vw, 4.5rem);
   font-weight: 300; line-height: 1.05; color: var(--text);
   margin: 16px 0 24px; letter-spacing: -0.02em;
+  /* Stops a display line breaking to leave one orphaned word. */
+  text-wrap: balance;
 }
+/* Set in the reading serif, not the UI sans. Inter is drawn to be neutral
+   in an interface; a magazine paragraph wants a voice. The measure moves
+   from a flat 440px to ~60 characters so the line length follows the type
+   size instead of fighting it, and a drop cap marks where to start. */
 .editorial__body {
-  color: var(--muted); font-size: 15px; line-height: 1.85; max-width: 440px; margin-bottom: 32px;
+  font-family: var(--font-read);
+  color: var(--muted);
+  font-size: 16.5px;
+  line-height: 1.72;
+  max-width: 60ch;
+  margin-bottom: 32px;
 }
+.editorial__body::first-letter {
+  float: left;
+  font-family: var(--font-head);
+  font-size: 3.2em;
+  line-height: 0.84;
+  padding: 5px 9px 0 0;
+  color: var(--gold-light);
+}
+/* Figures in the stats strip line up in columns, so they get tabular
+   numerals — otherwise a 1 takes less room than a 4 and the row wobbles. */
+.editorial__stat-num { font-variant-numeric: tabular-nums; }
 .editorial__stats {
   display: flex; gap: 32px; margin-bottom: 40px;
   padding: 24px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);

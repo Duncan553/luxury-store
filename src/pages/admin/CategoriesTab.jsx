@@ -46,9 +46,15 @@ export default function CategoriesTab({ categories, products, refetch }) {
 
   async function deleteCategory(id, name) {
     const count = products.filter(p => p.category === name).length;
+    // The old wording said the products "become uncategorised", which isn't
+    // what happens. Deleting the row leaves each product still labelled with
+    // this category name, but with nothing pointing at it: no nav link, no
+    // card on the homepage or About deck. They're not uncategorised, they're
+    // unreachable — findable only by typing the URL. Say that, because the
+    // fix (move them first) is different from what the old message implied.
     const msg   = count > 0
-      ? `Delete "${name}"? It has ${count} product(s) — they'll become uncategorised.`
-      : `Delete "${name}"?`;
+      ? `Delete "${name}"?\n\n${count} product(s) are in it. They will NOT be deleted, but they will stop being reachable — the category disappears from the menu and the homepage, and nothing will link to them.\n\nMove them to another category first if you want to keep them visible.`
+      : `Delete "${name}"? It has no products.`;
     if (!window.confirm(msg)) return;
     await supabase.from('categories').delete().eq('id', id);
     refetch();

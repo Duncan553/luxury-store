@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import CategoryDeck from '../components/CategoryDeck';
 import { supabase } from '../lib/supabase';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSeo, reviewJsonLd } from '../lib/seo';
@@ -354,25 +355,15 @@ export default function About() {
         <div className="container">
           <p className="section-eyebrow reveal">What We Carry</p>
           <h2 className="section-title reveal" style={{ marginBottom: 40 }}>Categories</h2>
-          <div className="cat-grid reveal">
-            {categories.map((c) => (
-              <Link key={c.id ?? c.slug} to={`/category/${c.slug}`} className="cat-tile">
-                <div className="cat-tile__img">
-                  {c.cover_url
-                    ? <img src={c.cover_url} alt={c.name} loading="lazy" width="760" height="1013" />
-                    : <div className="cat-tile__ph" aria-hidden="true" />}
-                </div>
-                <div className="cat-tile__meta">
-                  <h3 className="cat-tile__name">{c.name}</h3>
-                  {/* Live count, not a written-in number — it can't go stale. */}
-                  <span className="cat-tile__count">
-                    {counts[c.slug] ?? 0} {counts[c.slug] === 1 ? 'piece' : 'pieces'}
-                  </span>
-                </div>
-                <p className="cat-tile__blurb">{BLURBS[c.slug] || FALLBACK_BLURB}</p>
-              </Link>
-            ))}
-          </div>
+          {/* Coverflow deck rather than a static grid: the active category
+              is front and centre, the others fan back in 3D, and it moves
+              on its own. Blurbs are attached to each category here so the
+              deck stays a presentation component with no knowledge of
+              Kamili's copy. */}
+          <CategoryDeck
+            categories={categories.map((c) => ({ ...c, blurb: BLURBS[c.slug] || FALLBACK_BLURB }))}
+            counts={counts}
+          />
         </div>
       </section>
 

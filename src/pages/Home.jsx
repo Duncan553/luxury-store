@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
+import CategoryDeck from '../components/CategoryDeck';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import Tilt from 'react-parallax-tilt';
 import { supabase } from '../lib/supabase';
@@ -79,6 +80,16 @@ const PARTICLES = Array.from({ length: 16 }, (_, i) => ({
   dur: 5 + (i % 7), delay: (i * 0.6) % 5,
 }));
 
+// Same copy the About deck uses. Duplicated deliberately rather than
+// imported from a page module — pages shouldn't import from each other —
+// and keyed by slug with a fallback so a new category still renders.
+const CAT_BLURBS = {
+  bags:       'Totes, satchels, crossbodies and backpacks — from an everyday work bag to something small for an evening out.',
+  jewelry:    'Chains, rings, bangles and earrings — light enough to wear every day, or the piece people actually notice.',
+  watches:    'Dress watches, chronographs and everyday steel — the one thing people read you by, and the only way to check the time without reaching for your phone.',
+  sunglasses: 'Aviators, wayfarers, cat-eye and round frames. Nairobi sun is not gentle; these handle it without looking like safety gear.',
+};
+
 export default function Home() {
   const [categories,       setCategories]       = useState([]);
   const [preorders,        setPreorders]        = useState([]);
@@ -89,6 +100,9 @@ export default function Home() {
   // { count: 'exact', head: true } asks Postgres for a row count without
   // pulling any rows back, so this costs nothing extra to keep truthful.
   const [productCount,     setProductCount]     = useState(null);
+  // Per-category counts for the deck. One column fetched, counted client
+  // side — cheaper than four count queries and small enough not to matter.
+  const [catCounts,        setCatCounts]        = useState({});
   // C2: vacation mode — fetched via CartContext (already fetches store_settings on mount)
   const { vacationMode, vacationMessage } = useCart();
 
@@ -130,6 +144,16 @@ export default function Home() {
     supabase.from('products').select('id', { count: 'exact', head: true })
       .neq('status', 'Out of Stock')
       .then(({ count }) => { if (typeof count === 'number') setProductCount(count); });
+    supabase.from('products').select('category')
+      .then(({ data }) => {
+        if (!data) return;
+        const by = {};
+        data.forEach((p) => {
+          const slug = (p.category || '').toLowerCase().replace(/\s+/g, '-');
+          by[slug] = (by[slug] || 0) + 1;
+        });
+        setCatCounts(by);
+      });
   }, []);
 
   return (
@@ -249,27 +273,31 @@ export default function Home() {
             <h2 className="cat-section__title">Shop by Category</h2>
           </Reveal>
 
-          <Stagger className="cat-grid container">
-            {categories.map(({ id, name, slug, cover_url }, i) => (
-              <motion.div key={id} variants={itemV}
-                className={`cat-card${i === 0 ? ' cat-card--featured' : ''}`}>
-                <Link to={`/category/${slug}`} className="cat-card__inner">
-                  <div className="cat-card__img"
-                    style={{ backgroundImage: `url(${cover_url || FALLBACK_IMGS[slug] || DEFAULT_IMG})` }} />
-                  <div className="cat-card__overlay" />
-                  <div className="cat-card__content">
-                    <span className="cat-card__eyebrow">Discover</span>
-                    <h3 className="cat-card__name">{name}</h3>
-                    <div className="cat-card__arrow">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
-                        <path d="M5 12h14M12 5l7 7-7 7"/>
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </Stagger>
+          {/* Same coverflow deck as the About page — one component, so the
+              two can't drift apart, and a category added in admin appears in
+              both. Every card routes: the front card is a link straight to
+              /category/<slug>, the side cards step forward first (tapping a
+              rotated, half-occluded card to navigate is a mis-tap waiting to
+              happen), and the CTA under the deck goes to whichever category
+              is currently in front. */}
+          <div className="container">
+            <CategoryDeck
+              categories={categories.map((c) => ({
+                ...c,
+                // NO image fallback. FALLBACK_IMGS is keyed by the original
+                // slugs, so any category the owner adds later fell through to
+                // DEFAULT_IMG — which is a handbag. A new "Perfume" category
+                // would have advertised itself with a picture of a bag, the
+                // same category/photo mismatch this catalogue already had to
+                // be dug out of. Passing the real value through means a
+                // cover-less category shows a neutral placeholder instead,
+                // which reads as "needs a cover" rather than as a wrong one.
+                cover_url: c.cover_url || null,
+                blurb: CAT_BLURBS[c.slug] || 'Browse what we currently have in this category.',
+              }))}
+              counts={catCounts}
+            />
+          </div>
         </section>
       )}
 

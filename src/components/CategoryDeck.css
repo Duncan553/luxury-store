@@ -1,0 +1,220 @@
+/* CategoryDeck.css — coverflow deck.
+   Namespaced .deck-* deliberately: .editorial collided with the homepage's
+   own section class earlier in this project and silently restyled it,
+   because Vite bundles every stylesheet into one file. */
+
+.deck {
+  position: relative;
+  /* Custom properties are the whole layout system here — one set for
+     phones, overridden once at 720px. Every transform below is derived
+     from these, so the two layouts can't drift apart. */
+  --card-w: 62vw;
+  --step: 46vw;      /* how far each card sits from its neighbour */
+  --rot: 26deg;      /* 3D turn applied per step out from centre */
+  --scale-step: 0.13;
+  outline: none;
+}
+.deck:focus-visible { outline: 1px solid var(--gold); outline-offset: 12px; }
+
+.deck__stage {
+  position: relative;
+  height: calc(var(--card-w) * 1.333 + 56px);   /* 3:4 card + label room */
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  /* perspective is what makes the side cards turn away rather than just
+     shrink — the difference between a fan and a row of small pictures. */
+  perspective: 1400px;
+  perspective-origin: 50% 40%;
+  margin-bottom: 20px;
+}
+
+.deck__card {
+  position: absolute;
+  top: 0;
+  width: var(--card-w);
+  transform-style: preserve-3d;
+  /* All five properties animate from the single --d value. */
+  transform:
+    translateX(calc(var(--d) * var(--step)))
+    rotateY(calc(var(--d) * var(--rot) * -1))
+    scale(calc(1 - min(abs(var(--d)), 2) * var(--scale-step)));
+  opacity: calc(1 - min(abs(var(--d)), 2) * 0.34);
+  transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.5s ease;
+  will-change: transform, opacity;
+}
+/* abs() is recent; without it the calc above silently fails and every card
+   lands on top of the others. This fallback keeps the fan working: same
+   shape, applied per offset instead of computed. */
+@supports not (width: abs(1px)) {
+  .deck__card { transform: translateX(calc(var(--d) * var(--step))) rotateY(calc(var(--d) * var(--rot) * -1)); opacity: 0.66; }
+  .deck__card.is-active { transform: none; opacity: 1; }
+}
+
+.deck__hit {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.deck__img,
+.deck__ph {
+  display: block;
+  width: 100%;
+  /* height:auto is load-bearing. The <img> carries width/height attributes
+     (they reserve space and stop layout shift on a slow phone connection),
+     and those attributes apply as CSS PRESENTATIONAL HINTS. This rule set
+     width but not height, so the attribute's height won and aspect-ratio
+     never got to compute — cards rendered 300x1013 instead of 300x400.
+     Setting height:auto hands control back to aspect-ratio. */
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  /* Rounded, as in both references. */
+  border-radius: 10px;
+}
+.deck__ph {
+  border-style: dashed;
+  display: grid;
+  place-items: center;
+}
+/* A cover-less category is a prompt, not a broken image. */
+.deck__ph::after {
+  content: 'No cover yet';
+  font-family: var(--font-body);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+/* Only the front card gets the lift. A shadow under a card that's turned
+   away reads as a mistake. */
+.deck__card.is-active .deck__img {
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.62);
+  border-color: rgba(255, 255, 255, 0.16);
+}
+
+.deck__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.deck__name {
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+  color: var(--text);
+}
+.deck__count {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+/* Side cards' labels are dimmed by the card's own opacity already; this
+   just stops them competing for the eye. */
+.deck__card:not(.is-active) .deck__name { color: var(--muted); }
+
+.deck__controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+/* 44px tap targets. The product cards shipped at 34px earlier in this
+   project and had to be fixed after measuring — not repeating that. */
+.deck__arrow {
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+.deck__arrow:hover { border-color: var(--gold); color: var(--gold-light); }
+
+.deck__dots { display: flex; gap: 6px; }
+.deck__dot {
+  /* 8px dot, 30x44 hit area — the target is finger-sized even though the
+     dot isn't. */
+  width: 30px; height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  position: relative;
+}
+.deck__dot::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto 50%;
+  transform: translate(-50%, -50%);
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--border);
+  transition: background 0.25s, width 0.25s;
+}
+.deck__dot.is-on::after { background: var(--gold); width: 22px; border-radius: 4px; }
+
+.deck__blurb {
+  margin: 18px auto 0;
+  max-width: 46ch;
+  text-align: center;
+  font-family: var(--font-read);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--muted);
+  /* Fades in when the active card changes (React re-keys it), so the copy
+     visibly belongs to the card in front. */
+  animation: deckFade 0.5s ease both;
+}
+@keyframes deckFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+
+.deck__cta {
+  display: block;
+  width: fit-content;
+  margin: 16px auto 0;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--gold-light);
+  border-bottom: 1px solid rgba(220, 20, 60, 0.35);
+  padding: 10px 2px;
+}
+.deck__cta:hover { border-bottom-color: var(--gold); }
+
+/* Laptop and up: fixed pixel card, wider fan, less rotation — at this size
+   a hard turn starts to distort the photograph. */
+@media (min-width: 720px) {
+  .deck {
+    --card-w: 300px;
+    --step: 232px;
+    --rot: 21deg;
+    --scale-step: 0.11;
+  }
+  .deck__stage { height: 456px; }
+  .deck__name { font-size: 1.15rem; }
+  .deck__blurb { font-size: 15px; max-width: 52ch; }
+}
+
+/* Motion is the point of this component, so under reduced-motion it stops
+   animating rather than disappearing: cards jump to position, autoplay
+   never starts (handled in JS), the blurb doesn't fade. */
+@media (prefers-reduced-motion: reduce) {
+  .deck__card { transition: none; }
+  .deck__blurb { animation: none; }
+}
