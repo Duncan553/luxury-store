@@ -11,10 +11,10 @@
   --border2:     rgba(255,255,255,0.12);
 
   --text:        #f0ebe1;
-  --muted:       #7a7a7a;
+  --muted:       #7d7975;
   /* #555 measured ~2.7:1 as a placeholder colour — unreadable on a phone
      in daylight. */
-  --muted2:      #8A8A8A;
+  --muted2:      #8d8884;
 
   /* #8B0000 on --bg (#070707) measured ~2.0:1 — the "Buy Now" / "Add to
      Cart" label was nearly unreadable in daylight. This crimson keeps the

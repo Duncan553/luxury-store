@@ -297,17 +297,10 @@
 }
 
 .bento-card--gold { background: var(--gold); border-color: transparent; }
-.bento-card--gold .bento-card__num,
-.bento-card--gold .bento-card__title { color: var(--bg); }
 .bento-card--gold .bento-card__desc  { color: rgba(0,0,0,0.65); }
 
 .bento-card--dark { background: var(--surface2); }
 
-.bento-card__num {
-  font-family: var(--font-head); font-size: 2.5rem;
-  font-weight: 300; color: var(--gold); margin-bottom: 16px; letter-spacing: -0.02em;
-}
-.bento-card__icon { font-size: 1.4rem; color: var(--gold); margin-bottom: 16px; }
 .bento-card__title {
   font-family: var(--font-head); font-size: 1.3rem;
   font-weight: 400; color: var(--text); margin-bottom: 10px;

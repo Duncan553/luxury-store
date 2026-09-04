@@ -135,12 +135,6 @@
   letter-spacing: 0.16em; text-transform: uppercase;
   padding: 5px 12px;
 }
-.about-coll__num {
-  font-family: var(--font-head); font-size: 5rem;
-  font-weight: 300; color: var(--border2); line-height: 1;
-  display: block; margin-bottom: -8px;
-  letter-spacing: -0.04em;
-}
 .about-coll__label {
   font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
   text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
@@ -224,8 +218,7 @@
   .about-review-form-wrap { max-width: 100%; }
   .about-coll { grid-template-columns: 1fr; gap: 28px; margin-bottom: 56px; }
   .about-coll--reverse { direction: ltr; }
-  .about-coll__num { font-size: 3.5rem; }
-  .about-settings-grid { grid-template-columns: 1fr 1fr; }
+    .about-settings-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {

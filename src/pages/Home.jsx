@@ -375,8 +375,14 @@ export default function Home() {
               <div className="bento-card__img"
                 style={{ backgroundImage: `url(${FALLBACK_IMGS.bags})` }} />
               <div className="bento-card__overlay" />
+              {/* No decorative glyph/number markers on these four cards.
+                  They previously alternated ✦ / "01" / ◎ / "02" — numbering
+                  only half the set, on content that isn't a sequence (these
+                  are four parallel reasons to buy, not four ordered steps).
+                  Structure should encode something true about the content;
+                  that numbering encoded nothing, so it's gone and the
+                  headings carry the cards. */}
               <div className="bento-card__body">
-                <span className="bento-card__icon">✦</span>
                 <h3 className="bento-card__title">Real Photos, Real Stock</h3>
                 <p className="bento-card__desc">What you see is what's actually available — no stock-photo swaps.</p>
               </div>
@@ -384,21 +390,23 @@ export default function Home() {
 
             {/* Small cards */}
             <motion.div variants={itemV} className="bento-card bento-card--sm bento-card--gold">
-              <span className="bento-card__num">01</span>
               <h3 className="bento-card__title">Order on WhatsApp</h3>
               <p className="bento-card__desc">Chat first, pay when you're sure. No card details, no forms.</p>
             </motion.div>
 
             <motion.div variants={itemV} className="bento-card bento-card--sm">
-              <span className="bento-card__icon">◎</span>
               <h3 className="bento-card__title">Nairobi-Based</h3>
               <p className="bento-card__desc">Delivery arranged across Kenya from a local WhatsApp number.</p>
             </motion.div>
 
+            {/* Was "Personal Touch — every order fulfilled personally, with
+                care and intention": the same overclaim stripped from the rest
+                of the site, and it just restated the WhatsApp card. Replaced
+                with something actually true and checkable — the cart now
+                refuses to let anyone order more than the real stock count. */}
             <motion.div variants={itemV} className="bento-card bento-card--sm bento-card--dark">
-              <span className="bento-card__num">02</span>
-              <h3 className="bento-card__title">Personal Touch</h3>
-              <p className="bento-card__desc">Every order fulfilled personally, with care and intention.</p>
+              <h3 className="bento-card__title">Live Stock Counts</h3>
+              <p className="bento-card__desc">You can't order what we don't have — the cart stops at what's on the shelf.</p>
             </motion.div>
           </Stagger>
         </div>

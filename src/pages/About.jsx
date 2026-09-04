@@ -203,14 +203,16 @@ export default function About() {
         <div className="container">
           <p className="section-eyebrow reveal">What We Carry</p>
           <h2 className="section-title reveal" style={{ marginBottom: 56 }}>The Edit</h2>
-          {COLLECTIONS.map((col, i) => (
+          {COLLECTIONS.map((col) => (
             <div key={col.label} className={`about-coll reveal${col.align === 'right' ? ' about-coll--reverse' : ''}`}>
               <div className="about-coll__img-wrap">
                 <img src={col.img} alt={col.label} className="img-cover about-coll__img" />
                 <div className="about-coll__img-tag">{col.tag}</div>
               </div>
+              {/* No "01 / 02" marker here either — these are product
+                  categories, not an ordered sequence, so numbering them
+                  encoded nothing. */}
               <div className="about-coll__text">
-                <span className="about-coll__num">0{i + 1}</span>
                 <h3 className="about-coll__label">{col.label}</h3>
                 <p className="about-coll__headline">{col.headline}</p>
                 <p className="about-coll__body">{col.body}</p>
