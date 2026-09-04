@@ -2,17 +2,11 @@ import { useState, useEffect } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import MobileMenu from './MobileMenu';
+import { navLinks } from '../lib/nav';
 import './Navbar.css';
 
-const NAV_LINKS = [
-  { label: 'Bags',    to: '/category/bags' },
-  { label: 'Jewelry', to: '/category/jewelry' },
-  { label: 'Watches', to: '/category/watches' },
-  { label: 'About',   to: '/about' },
-];
-
 export default function Navbar() {
-  const { itemCount, isOpen: cartOpen, setIsOpen: setCartOpen } = useCart();
+  const { itemCount, isOpen: cartOpen, setIsOpen: setCartOpen, categories } = useCart();
   const [scrolled,  setScrolled]  = useState(false);
   const [menuOpen,  setMenuOpen]  = useState(false);
   const location = useLocation();
@@ -36,7 +30,7 @@ export default function Navbar() {
         <Link to="/" className="navbar__logo">KAMILI</Link>
 
         <nav className="navbar__links" aria-label="Main navigation">
-          {NAV_LINKS.map(({ label, to }) => (
+          {navLinks(categories).map(({ label, to }) => (
             <NavLink
               key={to}
               to={to}

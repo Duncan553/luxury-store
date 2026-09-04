@@ -365,8 +365,13 @@ export default function Home() {
       <section className="bento-section section">
         <div className="container">
           <Reveal style={{ textAlign: 'center', marginBottom: 48 }}>
-            <span className="section-eyebrow">Why Kamili</span>
-            <h2 className="section-title">The Standard<br />We Hold Ourselves To</h2>
+            {/* Was "Why Kamili / The Standard We Hold Ourselves To" — a
+                heading about Kamili's own character rather than about
+                anything the customer needs. A shop that announces its
+                standards invites the reader to weigh them; stating the
+                facts and letting them stand does not. */}
+            <span className="section-eyebrow">Good To Know</span>
+            <h2 className="section-title">How ordering<br />works here</h2>
           </Reveal>
 
           <Stagger className="bento-grid">
@@ -383,8 +388,15 @@ export default function Home() {
                   that numbering encoded nothing, so it's gone and the
                   headings carry the cards. */}
               <div className="bento-card__body">
-                <h3 className="bento-card__title">Real Photos, Real Stock</h3>
-                <p className="bento-card__desc">What you see is what's actually available — no stock-photo swaps.</p>
+                {/* Was "Real Photos, Real Stock — what you see is what's
+                    actually available, no stock-photo swaps". That claim
+                    became false the moment the catalogue was filled with
+                    placeholder listings that use stock photography. A
+                    promise the site itself breaks is worse than no promise,
+                    so it's replaced with the fact a buyer most needs and
+                    that the site can actually keep. */}
+                <h3 className="bento-card__title">Delivery Quoted Before You Pay</h3>
+                <p className="bento-card__desc">Prices here cover the item. We send you the delivery cost for your area on WhatsApp first.</p>
               </div>
             </motion.div>
 

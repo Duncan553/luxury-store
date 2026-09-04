@@ -46,7 +46,7 @@ const COLLECTIONS = [
   {
     label: 'Watches',
     headline: 'Time, on your wrist.',
-    body: 'Sourced pieces, checked before they ship. Message us on WhatsApp for photos of the specific unit before you commit.',
+    body: 'Message us on WhatsApp and we\'ll send photos of the exact watch before you order.',
     img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
     tag: 'Watches',
     align: 'right',
@@ -54,7 +54,7 @@ const COLLECTIONS = [
   {
     label: 'Jewellery',
     headline: 'Pieces worth wearing daily.',
-    body: 'Rings, bangles, pendants — bought in, sold on. We tell you what we know about each piece; we don\'t pretend to have made it.',
+    body: 'Rings, bangles, pendants and earrings. Ask us anything about a piece before you order it.',
     img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80',
     tag: 'Jewellery',
     align: 'left',
@@ -158,16 +158,15 @@ export default function About() {
       <section className="section">
         <div className="container about-story">
           <div className="about-story__text reveal">
-            <h2 className="about-story__heading">Sourced smart.<br />Sold straight.</h2>
+            <h2 className="about-story__heading">Bags, jewellery<br />&amp; watches.</h2>
             <p>
-              Kamili sells bags, jewellery and watches out of Nairobi. We don't make
-              what we sell, and we don't pretend to — the value is in sourcing real
-              pieces and being straightforward about what you're buying, before you
-              buy it.
+              Kamili is a shop in Nairobi selling bags, jewellery and watches.
+              We buy stock in and sell it on — we're not the manufacturer.
             </p>
             <p style={{ marginTop: 16 }}>
-              Every order goes through a real person on WhatsApp, not a form. Ask
-              questions before you pay — that's the whole model.
+              Orders happen on WhatsApp. Send us what you want and we'll reply
+              with the delivery cost for your area before you pay anything. If
+              you want more photos of a piece first, just ask.
             </p>
             <div className="about-origin-tag reveal reveal-delay-1">
               <span>✦</span> Nairobi, Kenya — Est. 2024
@@ -195,6 +194,104 @@ export default function About() {
           is a liability, not a trust signal. Replace only with real
           content — designers Kamili actually stocks, sourced from the
           catalogue — never with another invented paragraph. */}
+
+      <div className="divider container" />
+
+      {/* ── How ordering actually works ─────────────────────────────────
+          Three real operational facts, in the order a customer meets them.
+          This replaces nothing — it fills a gap: the site sold pieces but
+          never explained the process, and "how does this work / how much is
+          delivery / can I get more than one" are the questions that stop a
+          first-time buyer.
+
+          Written as process, not persuasion, on purpose. Consumers run a
+          background audit on anything that reads as a sales pitch
+          (Friestad & Wright's persuasion-knowledge model) and discount it —
+          the more a page pushes, the less each claim is worth. Answering
+          the question is what earns trust; "we're the best" spends it.
+
+          Numbered 01/02/03 because this genuinely IS a sequence — you
+          browse, then you message, then it's delivered. Numbering anything
+          that isn't ordered would be decoration. */}
+      <section className="section-sm">
+        <div className="container">
+          <p className="section-eyebrow reveal">Before You Order</p>
+          <h2 className="section-title reveal" style={{ marginBottom: 40 }}>How It Works</h2>
+          <div className="about-how reveal">
+            {[
+              {
+                n: '01',
+                h: 'Pick, then ask',
+                b: 'Add what you want to the cart and send it to us on WhatsApp. Nothing is charged yet. Ask for more photos of the exact piece if you want them.',
+              },
+              {
+                n: '02',
+                h: 'Delivery costs extra',
+                b: 'Prices on this site cover the item only. Delivery is added on top and depends on your area — we send you the exact amount on WhatsApp before you pay.',
+              },
+              {
+                n: '03',
+                h: 'Anywhere in Kenya',
+                b: 'Nairobi deliveries are arranged directly. Outside Nairobi we send by courier to your nearest town — you get the tracking details once it\'s on the way.',
+              },
+            ].map((step) => (
+              <div key={step.n} className="about-how__item">
+                <span className="about-how__num">{step.n}</span>
+                <h3 className="about-how__h">{step.h}</h3>
+                <p className="about-how__b">{step.b}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="divider container" />
+
+      {/* ── Bulk & resale orders ────────────────────────────────────────
+          A shop that sells through WhatsApp is already set up for the one
+          conversation retail sites handle worst: "I want twelve of these."
+          Nothing on the site told a reseller, a gifting buyer or an event
+          organiser that this was even possible, so those orders simply
+          didn't get asked for.
+
+          No price list and no "save up to X%" — the owner sets bulk pricing
+          per deal, and inventing a discount figure here would either
+          undercut them or become a promise they have to break. The link
+          pre-fills the enquiry instead: the customer's side of a bulk
+          conversation is the hard part, so the message writes itself. */}
+      <section className="section-sm">
+        <div className="container">
+          <div className="about-bulk reveal">
+            <div className="about-bulk__text">
+              <p className="section-eyebrow">Buying More Than One</p>
+              <h2 className="about-bulk__title">Bulk &amp; resale orders</h2>
+              <p className="about-bulk__body">
+                Stocking a shop, buying for a group, or sorting gifts for an
+                event? Tell us the pieces and the quantity and we'll quote you
+                directly — bulk pricing depends on the item and how many you
+                need, so it's a conversation rather than a fixed list.
+              </p>
+              <ul className="about-bulk__list">
+                <li>Mixed orders are fine — bags, watches and jewellery on one invoice.</li>
+                <li>We'll confirm what's in stock and what needs to be sourced, with a realistic date.</li>
+                <li>Countrywide delivery, quoted per order.</li>
+              </ul>
+              {settings?.whatsapp && (
+                <a
+                  className="btn btn-whatsapp about-bulk__cta"
+                  href={`https://wa.me/${settings.whatsapp.replace(/^0/, '254').replace(/\D/g, '')}?text=${encodeURIComponent(
+                    "Hi Kamili — I'd like a bulk quote.\n\nItems:\nQuantity:\nDelivery area:"
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Ask for a bulk quote
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
 
       <div className="divider container" />
 

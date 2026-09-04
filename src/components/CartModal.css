@@ -100,6 +100,19 @@
   font-family: var(--font-head); font-size: 1.2rem;
   margin-bottom: 4px;
 }
+/* The delivery row sits under "Items total" as a quieter sibling: same
+   left/right structure so it reads as part of the same summary, but small
+   and muted so it informs without shouting. The point is that the customer
+   sees a delivery line EXISTS before they commit — not that it competes
+   with the price. */
+.cart-total--delivery {
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: -6px;
+  margin-bottom: 8px;
+}
+
 .cart-cta { width: 100%; height: 50px; font-size: 12px; }
 
 /* ── WhatsApp order form ──────────────────────────────────────────────── */
@@ -128,6 +141,16 @@
   font-weight: 300; color: var(--gold); line-height: 1;
 }
 .wa-form__total span { font-size: 1rem; color: var(--muted); font-family: var(--font-body); }
+/* Higher specificity on purpose: the rule above targets every span inside
+   .wa-form__total, so a plain .wa-form__total-note class would lose to it
+   and render at 1rem. */
+.wa-form__total span.wa-form__total-note {
+  display: block;
+  font-size: 11px;
+  color: var(--muted2);
+  letter-spacing: 0.04em;
+  margin-top: 6px;
+}
 
 .wa-optional { color: var(--muted2); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 10px; }
 

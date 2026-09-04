@@ -61,6 +61,10 @@ export function CartProvider({ children }) {
   // Live WhatsApp number from admin → Settings; falls back to the constant
   // above only if the field is empty.
   const [waNumber,        setWaNumber]        = useState(WHATSAPP_FALLBACK);
+  // Nav categories. Fetched here rather than in Navbar because BOTH Navbar and
+  // MobileMenu need the same list — one fetch, one source of truth, no
+  // duplicate query when the burger opens.
+  const [categories,      setCategories]      = useState([]);
 
   // Persist to both storage layers on every cart change.
   useEffect(() => {
@@ -83,6 +87,20 @@ export function CartProvider({ children }) {
           if (n) setWaNumber(n);
         }
       });
+  }, []);
+
+  // The nav used to be a hardcoded array of Bags/Jewelry/Watches. That made
+  // admin -> Categories a half-working feature: the owner could create a
+  // category, products could be assigned to it, its page rendered fine at
+  // /category/<slug> — and no customer could ever reach it, because nothing
+  // linked there. Found it the moment "Sunglasses" was added for real.
+  // Now the nav IS the categories table; adding a category adds a nav link.
+  useEffect(() => {
+    supabase
+      .from('categories')
+      .select('name, slug')
+      .order('created_at')
+      .then(({ data }) => { if (data) setCategories(data); });
   }, []);
 
   // Real bug, not just a described one: the cart never checked stock. A
@@ -207,7 +225,7 @@ export function CartProvider({ children }) {
       openCheckout,
       addItem, removeItem, updateQty,
       clearCart, checkoutViaWhatsApp,
-      vacationMode, vacationMessage, waNumber,
+      vacationMode, vacationMessage, waNumber, categories,
     }}>
       {children}
     </CartContext.Provider>

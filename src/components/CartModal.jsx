@@ -128,6 +128,10 @@ export default function CartModal() {
               <div className="wa-form__total">
                 Ksh {total.toLocaleString('en-KE')}
                 <span> · {items.length} item{items.length !== 1 ? 's' : ''}</span>
+                {/* Repeated here, not just in the cart: this is the last screen
+                    before the order leaves, and it's the number the customer
+                    will hold you to. */}
+                <span className="wa-form__total-note">excludes delivery</span>
               </div>
 
               <div className="form-group">
@@ -139,7 +143,7 @@ export default function CartModal() {
               </div>
 
               <p className="wa-reassure">
-                No payment now. We'll confirm your delivery location and price on WhatsApp first.
+                No payment now. We'll confirm your delivery cost on WhatsApp before anything is paid.
               </p>
             </div>
 
@@ -195,15 +199,39 @@ export default function CartModal() {
 
             {items.length > 0 && (
               <div className="cart-drawer__footer">
+                {/* Labelled "Items total", not "Total".
+                    This is the whole drip-pricing fix in one word. Delivery is
+                    charged separately here, so calling this number "Total" made
+                    the site promise a final price it doesn't honour — the
+                    customer then meets the delivery fee on WhatsApp, at the
+                    moment they'd already committed. Baymard puts extra costs at
+                    the top of the abandonment list (48%), and the damage comes
+                    from the surprise, not the amount: people judge each price in
+                    a sequence for fairness, so a fee that appears late reads as
+                    a bait-and-switch even when it's reasonable.
+                    One word, disclosed early, costs nothing. */}
                 <div className="cart-total">
-                  <span>Total</span>
+                  <span>Items total</span>
                   <span>Ksh {total.toLocaleString('en-KE')}</span>
+                </div>
+                <div className="cart-total cart-total--delivery">
+                  <span>Delivery</span>
+                  <span>Quoted by location</span>
                 </div>
                 {/* Single checkout path — the one that actually works. */}
                 <button className="btn btn-whatsapp cart-cta" onClick={() => setView('whatsapp')}>
                   {WA_ICON} Order via WhatsApp
                 </button>
-                <p className="cart-reassure">Delivery is arranged on WhatsApp · pay on confirmation</p>
+                {/* Deliberately NOT a popup fired on the checkout click.
+                    NN/g's finding on overlays is that they interrupt the
+                    critical task and force an action before the user can
+                    continue — and a modal at "Order via WhatsApp" would hit at
+                    the single worst moment, the point of commitment. Same
+                    information, placed inline and one step earlier, informs
+                    without blocking. */}
+                <p className="cart-reassure">
+                  Delivery is charged separately — we quote it on WhatsApp once we know your area. Pay on confirmation.
+                </p>
               </div>
             )}
           </>
