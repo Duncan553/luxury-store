@@ -390,3 +390,35 @@
   line-height: 1.7;
   color: var(--muted);
 }
+
+/* ── Layered type over the wide plate ─────────────────────────────────
+   The hero's device: a word large enough to break past the photograph,
+   with the photograph in front of it so the picture cuts the word. Absolute
+   positioning rather than transforms, because this sits inside a
+   framer-motion element and framer writes transform as an inline style — a
+   CSS transform here would be silently discarded. */
+.aed__fig { position: relative; }
+.aed__fig img { position: relative; z-index: 1; }
+
+/* The wide plate gets the solid counterpart, hanging off its bottom edge. */
+.about-plate { position: relative; }
+.about-plate__word {
+  position: absolute;
+  z-index: 2;
+  left: 0.02em;
+  bottom: -0.16em;
+  font-family: var(--font-head);
+  font-size: clamp(3.4rem, 13vw, 11rem);
+  font-weight: 600;
+  line-height: 0.8;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  color: var(--text);
+  text-shadow: 0 2px 30px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+  user-select: none;
+}
+/* Room for the word that now hangs below the plate, so the caption and the
+   next section don't collide with it. */
+.about-plate { margin-bottom: clamp(38px, 7vw, 92px); }
+.about-plate__cap { position: relative; z-index: 3; }

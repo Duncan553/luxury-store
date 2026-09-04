@@ -190,6 +190,11 @@ export default function About() {
             with the image first, because a 390px screen has no room for
             asymmetry and the picture is the better opening. */}
         <div className="container aed">
+          {/* No layered word over this figure. The layered-type device is
+              carried by the wide plate further down (and by the hero on the
+              landing page); repeating it here put a second oversized word
+              directly above the headline, which left the opening with two
+              things competing to be read first. */}
           <figure className="aed__fig reveal reveal-delay-2">
             {/* Served from our own storage, already graded to the same mono
                 as the hero plate and the category covers, rather than a
@@ -257,6 +262,9 @@ export default function About() {
       <section className="section-sm">
         <div className="container">
           <figure className="about-plate reveal">
+            {/* Solid word over the plate, crossing it — the counterpart to
+                the outlined one behind the figure above. */}
+            <span className="about-plate__word" aria-hidden="true">Kamili</span>
             <img
               src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg"
               srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-520.jpg 520w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg 1040w"

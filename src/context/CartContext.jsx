@@ -61,6 +61,9 @@ export function CartProvider({ children }) {
   // Live WhatsApp number from admin → Settings; falls back to the constant
   // above only if the field is empty.
   const [waNumber,        setWaNumber]        = useState(WHATSAPP_FALLBACK);
+  // The whole settings row, exposed so the footer can show real contact
+  // details without a second query — this fetch already happens.
+  const [settings,        setSettings]        = useState(null);
   // Nav categories. Fetched here rather than in Navbar because BOTH Navbar and
   // MobileMenu need the same list — one fetch, one source of truth, no
   // duplicate query when the burger opens.
@@ -76,11 +79,12 @@ export function CartProvider({ children }) {
   useEffect(() => {
     supabase
       .from('store_settings')
-      .select('vacation_mode, vacation_message, whatsapp')
+      .select('*')
       .eq('id', 'singleton')
       .single()
       .then(({ data }) => {
         if (data) {
+          setSettings(data);
           setVacationMode(!!data.vacation_mode);
           setVacationMessage(data.vacation_message || '');
           const n = normaliseWaNumber(data.whatsapp);
@@ -225,7 +229,7 @@ export function CartProvider({ children }) {
       openCheckout,
       addItem, removeItem, updateQty,
       clearCart, checkoutViaWhatsApp,
-      vacationMode, vacationMessage, waNumber, categories,
+      vacationMode, vacationMessage, waNumber, categories, settings,
     }}>
       {children}
     </CartContext.Provider>
