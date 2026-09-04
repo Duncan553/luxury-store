@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CategoryDeck from '../components/CategoryDeck';
+// Imported, not fetched — see the note in Home.jsx.
+import aboutSm    from '../assets/editorial/about-440.jpg';
+import aboutLg    from '../assets/editorial/about-800.jpg';
+import plateSm    from '../assets/editorial/bag-watch-520.jpg';
+import plateLg    from '../assets/editorial/bag-watch-1040.jpg';
 import { supabase } from '../lib/supabase';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSeo, reviewJsonLd } from '../lib/seo';
@@ -167,11 +172,18 @@ export default function About() {
       )}
 
       {/* ── Hero ──────────────────────────────────────────────────────── */}
+      {/* Cover head, not a page banner. A print cover carries three things
+          in this order: the section it belongs to, the masthead at a scale
+          nothing else on the page gets, and a standfirst. It was a small
+          eyebrow, an italic 96px word and an uppercase line — the parts were
+          right, the hierarchy wasn't. */}
       <div className="about-hero">
-        <div className="container">
-          <p className="section-eyebrow">Our Story</p>
+        <div className="container about-hero__inner reveal-stagger visible">
+          <span className="ed-kicker">Our story</span>
           <h1 className="about-hero__title">Kamili</h1>
-          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp.</p>
+          <p className="about-hero__sub">
+            Bags, jewellery &amp; watches — ordered on WhatsApp.
+          </p>
         </div>
       </div>
 
@@ -201,8 +213,8 @@ export default function About() {
                 colour file greyscaled in the browser — one grade, one
                 publication. Two widths so a phone fetches 13KB, not 38. */}
             <img
-              src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-800.jpg"
-              srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-440.jpg 440w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-800.jpg 800w"
+              src={aboutLg}
+              srcSet={`${aboutSm} 440w, ${aboutLg} 800w`}
               sizes="(max-width: 859px) 92vw, 38vw"
               alt="A black leather tote held by its handles"
               width="800" height="1000"
@@ -266,8 +278,8 @@ export default function About() {
                 the outlined one behind the figure above. */}
             <span className="about-plate__word" aria-hidden="true">Kamili</span>
             <img
-              src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg"
-              srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-520.jpg 520w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg 1040w"
+              src={plateLg}
+              srcSet={`${plateSm} 520w, ${plateLg} 1040w`}
               sizes="(max-width: 900px) 94vw, 1040px"
               alt="A hand resting on a black leather handbag, wearing a steel watch"
               width="1040" height="780"

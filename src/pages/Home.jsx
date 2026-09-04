@@ -2,6 +2,17 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import CategoryDeck from '../components/CategoryDeck';
+// Design photography is IMPORTED, not fetched from a URL. Vite bundles and
+// fingerprints these, so they ship with the site and are served from its own
+// origin — no third-party host, no round trip to storage, and they can't go
+// missing because a bucket changed. Product photos and category covers stay
+// in storage on purpose: the owner manages those from admin, and baking them
+// into the bundle would mean a code deploy every time stock changes.
+import heroSm   from '../assets/editorial/hero-520.jpg';
+import heroLg   from '../assets/editorial/hero-1000.jpg';
+import whySm    from '../assets/editorial/why-kamili-450.jpg';
+import whyLg    from '../assets/editorial/why-kamili-900.jpg';
+import knowLg   from '../assets/editorial/good-to-know-900.jpg';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useSeo } from '../lib/seo';
@@ -207,8 +218,8 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.75 }}>
                 <img
-                  src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-1000.jpg"
-                  srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-520.jpg 520w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-1000.jpg 1000w"
+                  src={heroLg}
+                  srcSet={`${heroSm} 520w, ${heroLg} 1000w`}
                   sizes="(max-width: 767px) 74vw, 34vw"
                   alt="A black leather handbag held in both hands, with a gold watch on the wrist"
                   width="1000" height="1500"
@@ -362,8 +373,8 @@ export default function Home() {
                   rather than naming the section, which is what a screen
                   reader user needs. */}
               <img
-                src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg"
-                srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-450.jpg 450w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg 900w"
+                src={whyLg}
+                srcSet={`${whySm} 450w, ${whyLg} 900w`}
                 sizes="(max-width: 859px) 92vw, 40vw"
                 alt="A hand wearing bangles holding a striped leather handbag"
                 width="900" height="1125"
@@ -410,7 +421,7 @@ export default function Home() {
             <motion.div variants={itemV} className="bento-card bento-card--big">
               {/* Same treatment: a mono plate, hands and a watch, no face. */}
               <div className="bento-card__img"
-                style={{ backgroundImage: `url(https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/good-to-know-900.jpg)` }} />
+                style={{ backgroundImage: `url(${knowLg})` }} />
               <div className="bento-card__overlay" />
               {/* No decorative glyph/number markers on these four cards.
                   They previously alternated ✦ / "01" / ◎ / "02" — numbering

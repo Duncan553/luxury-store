@@ -1,119 +1,89 @@
-/* CategoryDeck.css — coverflow deck.
+/* CategoryDeck.css — a native snap scroller, styled as a shelf.
+
    Namespaced .deck-* deliberately: .editorial collided with the homepage's
    own section class earlier in this project and silently restyled it,
    because Vite bundles every stylesheet into one file. */
 
 .deck {
   position: relative;
-  /* Custom properties are the whole layout system here — one set for
-     phones, overridden once at 720px. Every transform below is derived
-     from these, so the two layouts can't drift apart. */
-  --card-w: 62vw;
-  --step: 46vw;      /* how far each card sits from its neighbour */
-  --rot: 26deg;      /* 3D turn applied per step out from centre */
-  --scale-step: 0.13;
-  outline: none;
-  /* Tells the browser up front that this element handles horizontal
-     gestures and the page keeps the vertical ones. Without it the browser
-     has to wait to see which direction the finger goes before it can scroll
-     — that hesitation at the top of every swipe is most of what "hanging"
-     feels like on a phone. */
-  touch-action: pan-y;
+  --card-w: 66vw;
 }
-.deck:focus-visible { outline: 1px solid var(--gold); outline-offset: 12px; }
 
+/* ── The scroller ─────────────────────────────────────────────────────
+   This is the whole reason the movement now feels right. The BROWSER owns
+   the scrolling, so a flick gets the operating system's own momentum and
+   deceleration — the thing no amount of JS easing reproduces. */
 .deck__stage {
-  position: relative;
-  height: calc(var(--card-w) * 1.333 + 56px);   /* 3:4 card + label room */
   display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  /* perspective is what makes the side cards turn away rather than just
-     shrink — the difference between a fan and a row of small pictures. */
-  perspective: 1400px;
-  perspective-origin: 50% 40%;
-  margin-bottom: 20px;
-  /* Nothing inside the stage affects layout outside it, so the browser can
-     skip re-checking the rest of the page while cards move. */
-  contain: layout paint;
+  gap: clamp(12px, 2vw, 22px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;   /* iOS momentum, explicitly */
+  /* This element claims the horizontal axis only, so a thumb swiping down
+     the page is never captured here. */
+  touch-action: pan-x pan-y;
+  scroll-behavior: auto;               /* JS passes 'smooth' when it wants it */
+  padding-block: 8px;
+  outline: none;
+  scrollbar-width: none;
+}
+.deck__stage::-webkit-scrollbar { display: none; }
+.deck__stage:focus-visible { outline: 1px solid var(--gold); outline-offset: 10px; }
+
+/* The first and last cards need half the leftover width as padding, or
+   they can never reach the centre of the scroller. */
+.deck__stage::before,
+.deck__stage::after {
+  content: '';
+  flex: 0 0 calc(50% - var(--card-w) / 2 - clamp(12px, 2vw, 22px));
 }
 
+/* While a mouse drag is running, snapping is off so the track follows the
+   cursor. Left on, every frame yanks toward the nearest point and the drag
+   feels like a slideshow. */
+.deck__stage.is-dragging {
+  scroll-snap-type: none;
+  cursor: grabbing;
+}
+
+/* ── Cards ──────────────────────────────────────────────────────────── */
 .deck__card {
-  position: absolute;
-  top: 0;
-  width: var(--card-w);
-  transform-style: preserve-3d;
-  /* All five properties animate from the single --d value. */
-  /* --drag is written by the pointer handler on every frame, so the deck
-     tracks the finger. It's part of the same transform, which means the
-     drag and the settle animate the same compositor property instead of
-     fighting each other. */
-  transform:
-    translate3d(calc(var(--d) * var(--step) + var(--drag, 0px)), 0, 0)
-    rotateY(calc(var(--d) * var(--rot) * -1))
-    scale(calc(1 - min(abs(var(--d)), 2) * var(--scale-step)));
-  opacity: calc(1 - min(abs(var(--d)), 2) * 0.34);
-  /* Ease-OUT, not ease-in-out: the card leaves immediately and settles
-     into place, which is what reads as responsive. An ease-in start makes
-     the deck feel like it's deciding whether to move. 0.55s is inside the
-     ~600ms ceiling past which a UI transition starts to feel laggy rather
-     than smooth. */
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.42s ease;
-  /* transform and opacity are the only two properties that animate purely
-     on the compositor — no layout, no paint. Everything that moves here is
-     one of those two, which is what keeps it at frame rate on a cheap
-     Android as well as a laptop. */
+  flex: 0 0 var(--card-w);
+  scroll-snap-align: center;
+  /* A fast flick should land on the next card rather than skating past
+     three — this is what makes a shelf feel controlled, not slippery. */
+  scroll-snap-stop: always;
+  /* Compositor-only properties, so the lift never costs a layout mid-scroll. */
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.4s ease;
+  transform: scale(0.9);
+  opacity: 0.5;
   will-change: transform;
-  backface-visibility: hidden;
 }
-
-/* While the finger is down there is no transition: each frame must land
-   exactly where the finger is. With a transition still running, every
-   frame restarts a 0.62s ease toward a target that has already moved and
-   the deck drags behind the finger. */
-.deck__stage.is-dragging .deck__card { transition: none; }
-/* abs() is recent; without it the calc above silently fails and every card
-   lands on top of the others. This fallback keeps the fan working: same
-   shape, applied per offset instead of computed. */
-@supports not (width: abs(1px)) {
-  .deck__card { transform: translateX(calc(var(--d) * var(--step))) rotateY(calc(var(--d) * var(--rot) * -1)); opacity: 0.66; }
-  .deck__card.is-active { transform: none; opacity: 1; }
-}
+.deck__card.is-active { transform: scale(1); opacity: 1; }
 
 .deck__hit {
+  position: relative;
   display: block;
-  width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
 .deck__img,
 .deck__ph {
   display: block;
   width: 100%;
-  /* height:auto is load-bearing. The <img> carries width/height attributes
-     (they reserve space and stop layout shift on a slow phone connection),
-     and those attributes apply as CSS PRESENTATIONAL HINTS. This rule set
-     width but not height, so the attribute's height won and aspect-ratio
-     never got to compute — cards rendered 300x1013 instead of 300x400.
-     Setting height:auto hands control back to aspect-ratio. */
+  /* height:auto is load-bearing: width/height attributes on an <img> apply
+     as CSS presentational hints, so a rule setting width but not height
+     lets the attribute's height win and aspect-ratio never computes. That
+     bug cost this component its layout once already. */
   height: auto;
   aspect-ratio: 3 / 4;
   object-fit: cover;
   background: var(--surface);
   border: 1px solid var(--border);
-  /* Rounded, as in both references. */
   border-radius: 10px;
+  user-select: none;
 }
-.deck__ph {
-  border-style: dashed;
-  display: grid;
-  place-items: center;
-}
-/* A cover-less category is a prompt, not a broken image. */
+.deck__ph { border-style: dashed; display: grid; place-items: center; }
 .deck__ph::after {
   content: 'No cover yet';
   font-family: var(--font-body);
@@ -123,24 +93,18 @@
   color: var(--muted2);
 }
 
-/* Only the front card gets the lift — a shadow under a card that's turned
-   away reads as a mistake.
-
-   The shadow is painted ONCE on a pseudo-element that exists on every card,
-   and only its opacity changes. Putting box-shadow directly on the active
-   card meant that every time the front card changed, a large blurred region
-   had to be repainted — and a blurred shadow is one of the most expensive
-   things to repaint mid-animation. Opacity costs nothing: the compositor
-   already has the layer. */
-.deck__hit { position: relative; }
+/* The lift on the centred card: painted once on a pseudo-element with only
+   its opacity changing. box-shadow on the card itself meant a large blurred
+   region was repainted every time the centre changed, and a blurred shadow
+   is among the most expensive things to repaint mid-scroll. */
 .deck__hit::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 10px;
-  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.62);
+  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.6);
   opacity: 0;
-  transition: opacity 0.45s ease;
+  transition: opacity 0.4s ease;
   pointer-events: none;
   z-index: -1;
 }
@@ -154,11 +118,7 @@
   gap: 8px;
   margin-top: 12px;
 }
-.deck__name {
-  font-family: var(--font-head);
-  font-size: 1.05rem;
-  color: var(--text);
-}
+.deck__name { font-family: var(--font-head); font-size: 1.05rem; color: var(--text); }
 .deck__count {
   font-size: 10.5px;
   letter-spacing: 0.08em;
@@ -166,28 +126,24 @@
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-/* Side cards' labels are dimmed by the card's own opacity already; this
-   just stops them competing for the eye. */
 .deck__card:not(.is-active) .deck__name { color: var(--muted); }
 
 .deck__blurb {
-  margin: 18px auto 0;
+  margin: 22px auto 0;
   max-width: 46ch;
   text-align: center;
   font-family: var(--font-read);
   font-size: 14.5px;
   line-height: 1.7;
   color: var(--muted);
-  /* Fades in when the active card changes (React re-keys it), so the copy
-     visibly belongs to the card in front. */
-  animation: deckFade 0.5s ease both;
+  animation: deckFade 0.45s ease both;
 }
 @keyframes deckFade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 
 .deck__cta {
   display: block;
   width: fit-content;
-  margin: 16px auto 0;
+  margin: 14px auto 0;
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 600;
@@ -195,55 +151,23 @@
   text-transform: uppercase;
   color: var(--gold-light);
   border-bottom: 1px solid rgba(216, 30, 54, 0.35);
-  /* 44px tall including padding — measured at 39px before. */
   padding: 14px 2px;
   min-height: 44px;
   box-sizing: border-box;
 }
 .deck__cta:hover { border-bottom-color: var(--gold); }
 
-/* Laptop and up: fixed pixel card, wider fan, less rotation — at this size
-   a hard turn starts to distort the photograph. */
 @media (min-width: 720px) {
-  .deck {
-    --card-w: 300px;
-    --step: 232px;
-    --rot: 21deg;
-    --scale-step: 0.11;
-  }
-  .deck__stage { height: 456px; }
+  .deck { --card-w: 300px; }
   .deck__name { font-size: 1.15rem; }
   .deck__blurb { font-size: 15px; max-width: 52ch; }
+  .deck__stage { cursor: grab; }   /* only where there's a cursor to change */
 }
 
-/* Motion is the point of this component, so under reduced-motion it stops
-   animating rather than disappearing: cards jump to position, autoplay
-   never starts (handled in JS), the blurb doesn't fade. */
+/* Reduced motion: the shelf keeps its shape and still scrolls — what goes
+   is the gliding. Cards cut between states, and JS scrolls instantly
+   rather than smoothly (see centreOn in the component). */
 @media (prefers-reduced-motion: reduce) {
-  .deck__card { transition: none; }
+  .deck__card { transition: opacity 0.2s ease; }
   .deck__blurb { animation: none; }
-}
-
-/* View-transition cross-fade for card -> category navigation.
-   Only shapes the transition the browser is already running; if the API
-   isn't supported these rules are inert and the Link navigates normally. */
-::view-transition-old(root) { animation-duration: 0.22s; }
-::view-transition-new(root) { animation-duration: 0.28s; }
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-old(root),
-  ::view-transition-new(root) { animation: none; }
-}
-
-/* Reduced-motion mode.
-   Two earlier versions of this were wrong. The first stacked every card at
-   translate3d(0,0,0), which destroyed the fan entirely. The second removed
-   the transform transition, which left the cards TELEPORTING between
-   positions — the deck jumped instead of moving, and that jump is what
-   made it look unfinished.
-   The setting asks for less motion, not none and not a different layout.
-   So the fan is untouched and the slide is kept — just shorter and flatter
-   than the full version. */
-.deck--fade .deck__card {
-  transition: transform 0.34s cubic-bezier(0.33, 1, 0.68, 1),
-              opacity 0.28s ease;
 }
