@@ -24,14 +24,19 @@
      7.09:1 with white text against the old 5.67:1 — so the fix that made
      "Buy Now" legible in daylight is strengthened, not undone.
 
+     Pushed back UP from the deep carmine to a vivid red: against a
+     near-black page the deep version lost its colour and read almost
+     brown. #D81E36 still clears the floor for white text at 5.05:1 —
+     comfortably above 4.5 with margin for antialiasing — so it stays a
+     usable button fill while actually reading as red.
+
      Deliberately NOT used for small red text: this colour on the near-
-     black ground is 2.84:1, and small text needs 4.5:1. --accent-text
-     exists for that and measures 7.38:1. The old crimson was 3.56:1 as
-     text — already below the floor before this change. */
-  --gold:        #B01030;
-  --gold-light:  #C8203E;
-  --gold-dim:    rgba(176,16,48,0.12);
-  --gold-glow:   0 0 40px rgba(176,16,48,0.18);
+     black ground is 3.99:1, and small text needs 4.5:1. --accent-text
+     exists for that and measures 7.38:1. */
+  --gold:        #D81E36;
+  --gold-light:  #EE3450;
+  --gold-dim:    rgba(216,30,54,0.12);
+  --gold-glow:   0 0 40px rgba(216,30,54,0.20);
   /* TEXT red — for red type on dark grounds (eyebrows, kickers, links).
      7.38:1 on --bg, so it clears AA for small text. */
   --accent-text: #FF6B85;
@@ -216,7 +221,7 @@ select option { background: var(--surface2); }
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--accent-text);
-  border: 1px solid rgba(220,20,60,0.4);
+  border: 1px solid rgba(216, 30, 54,0.4);
   padding: 3px 9px;
 }
 

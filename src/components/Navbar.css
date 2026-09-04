@@ -53,7 +53,11 @@
   position: relative;
   background: none; border: none;
   cursor: pointer; color: var(--text);
-  padding: 6px; display: flex; align-items: center;
+  /* 44px minimum. Measured at 31x31 on a 390px viewport — the cart is one
+     of the two controls every phone visitor uses, and it was the size of a
+     fingernail. The icon inside is unchanged; only the hit area grew. */
+  min-width: 44px; min-height: 44px;
+  padding: 6px; display: flex; align-items: center; justify-content: center;
   transition: color 0.3s var(--ease-btn);
 }
 .navbar__cart:hover { color: var(--gold); }
@@ -68,7 +72,10 @@
   display: none; flex-direction: column;
   justify-content: center; gap: 5px;
   background: none; border: none;
-  cursor: pointer; padding: 6px; width: 36px;
+  /* Same: measured 25x36. A menu button below 44px on a phone is a
+     mis-tap generator, and this one is the only way to reach the nav. */
+  cursor: pointer; padding: 6px; width: 44px; min-height: 44px;
+  align-items: center;
 }
 .navbar__burger span {
   display: block; height: 1px; background: var(--text);

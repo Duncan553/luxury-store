@@ -10,12 +10,12 @@
   position: relative;
 }
 .pcard:hover {
-  border-color: rgba(220,20,60,0.3);
+  border-color: rgba(216, 30, 54,0.3);
   transform: translateY(-4px);
   box-shadow:
     0 4px 8px rgba(0,0,0,0.18),
     0 12px 32px rgba(0,0,0,0.28),
-    0 0 0 1px rgba(220,20,60,0.08);
+    0 0 0 1px rgba(216, 30, 54,0.08);
 }
 /* Don't dim the whole card — the badge + disabled button communicate OOS clearly */
 .pcard--oos { opacity: 1; }
@@ -84,7 +84,7 @@
 .pcard:hover .pcard__overlay { opacity: 1; }
 
 .pcard__overlay-btn {
-  background: rgba(220,20,60,0.95);
+  background: rgba(216, 30, 54,0.95);
   backdrop-filter: blur(8px);
   color: var(--bg);
   border: none; cursor: pointer;
@@ -99,11 +99,11 @@
 
 .pcard__overlay-btn--view {
   background: rgba(255,255,255,0.1);
-  border: 1px solid rgba(220,20,60,0.5);
+  border: 1px solid rgba(216, 30, 54,0.5);
   color: var(--gold-light);
   transition: transform 0.4s var(--ease), background 0.2s, border-color 0.2s;
 }
-.pcard__overlay-btn--view:hover { background: rgba(220,20,60,0.15); border-color: var(--gold); }
+.pcard__overlay-btn--view:hover { background: rgba(216, 30, 54,0.15); border-color: var(--gold); }
 
 /* Body */
 .pcard__body {

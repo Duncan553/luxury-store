@@ -7,12 +7,6 @@ import { supabase } from '../lib/supabase';
 import { useSeo } from '../lib/seo';
 import './Home.css';
 
-const FALLBACK_IMGS = {
-  bags:    'https://images.unsplash.com/photo-1548036328-c9fa89d128fa?w=900&q=80',
-  jewelry: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80',
-  watches: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-};
-const DEFAULT_IMG = 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=900&q=80';
 const ease = [0.25, 0.46, 0.45, 0.94];
 
 /* ── Scroll-triggered fade ──────────────────────────────────────────── */
@@ -299,14 +293,14 @@ export default function Home() {
             <CategoryDeck
               categories={categories.map((c) => ({
                 ...c,
-                // NO image fallback. FALLBACK_IMGS is keyed by the original
-                // slugs, so any category the owner adds later fell through to
-                // DEFAULT_IMG — which is a handbag. A new "Perfume" category
-                // would have advertised itself with a picture of a bag, the
-                // same category/photo mismatch this catalogue already had to
-                // be dug out of. Passing the real value through means a
-                // cover-less category shows a neutral placeholder instead,
-                // which reads as "needs a cover" rather than as a wrong one.
+                // No image fallback, deliberately. The old FALLBACK_IMGS map
+                // was keyed by the original slugs, so any category added
+                // later fell through to a handbag photo — a "Perfume"
+                // category would have advertised itself with a picture of a
+                // bag. A cover-less category shows a labelled placeholder
+                // instead, which reads as "needs a cover" rather than as a
+                // wrong one. Both constants are gone now that nothing uses
+                // them.
                 cover_url: c.cover_url || null,
                 blurb: CAT_BLURBS[c.slug] || 'Browse what we currently have in this category.',
               }))}

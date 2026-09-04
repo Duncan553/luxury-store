@@ -156,7 +156,12 @@
 .star-input__star {
   background: none; border: none; font-size: 28px; cursor: pointer;
   color: var(--border2); transition: color 0.15s, transform 0.15s;
-  line-height: 1; padding: 0;
+  line-height: 1;
+  /* Was 32x29 with zero padding. Five stars that small, side by side, is
+     the worst tap-target case on the site: miss by 6px and you leave the
+     wrong rating. */
+  min-width: 44px; min-height: 44px; padding: 0;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .star-input__star.filled,
 .star-input__star:hover { color: var(--accent-text); }

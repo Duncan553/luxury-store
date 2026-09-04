@@ -194,8 +194,11 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--gold-light);
-  border-bottom: 1px solid rgba(220, 20, 60, 0.35);
-  padding: 10px 2px;
+  border-bottom: 1px solid rgba(216, 30, 54, 0.35);
+  /* 44px tall including padding — measured at 39px before. */
+  padding: 14px 2px;
+  min-height: 44px;
+  box-sizing: border-box;
 }
 .deck__cta:hover { border-bottom-color: var(--gold); }
 
