@@ -2,7 +2,7 @@
 // The add form is hidden behind a button so it doesn't dominate the view.
 import { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
-import { handleImgSelect, uploadImage } from '../../lib/imageUpload';
+import { handleImgSelect, uploadCover } from '../../lib/imageUpload';
 
 export default function CategoriesTab({ categories, products, refetch }) {
   const [showModal, setShowModal] = useState(false);
@@ -29,7 +29,9 @@ export default function CategoriesTab({ categories, products, refetch }) {
     setSaving(true);
     try {
       let coverUrl = null;
-      if (imgFile) coverUrl = await uploadImage(imgFile, 'categories');
+      // uploadCover, not uploadImage: a cover also needs its 380w and
+      // 760w versions, or the deck serves phones the full-size file.
+      if (imgFile) coverUrl = await uploadCover(imgFile, slug);
       await supabase.from('categories').insert({
         name: catName.trim(), slug, cover_url: coverUrl,
         created_at: new Date().toISOString(),
