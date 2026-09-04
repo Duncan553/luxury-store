@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CategoryDeck from '../components/CategoryDeck';
 // Imported, not fetched — see the note in Home.jsx.
-import aboutSm    from '../assets/editorial/about-440.jpg';
-import aboutLg    from '../assets/editorial/about-800.jpg';
-import plateSm    from '../assets/editorial/bag-watch-520.jpg';
-import plateLg    from '../assets/editorial/bag-watch-1040.jpg';
+import aboutSm    from '../assets/editorial/about-440.webp';
+import aboutLg    from '../assets/editorial/about-800.webp';
+import plateSm    from '../assets/editorial/bag-watch-520.webp';
+import plateLg    from '../assets/editorial/bag-watch-1040.webp';
 import { supabase } from '../lib/supabase';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSeo, reviewJsonLd } from '../lib/seo';

@@ -8,11 +8,11 @@ import CategoryDeck from '../components/CategoryDeck';
 // missing because a bucket changed. Product photos and category covers stay
 // in storage on purpose: the owner manages those from admin, and baking them
 // into the bundle would mean a code deploy every time stock changes.
-import heroSm   from '../assets/editorial/hero-520.jpg';
-import heroLg   from '../assets/editorial/hero-1000.jpg';
-import whySm    from '../assets/editorial/why-kamili-450.jpg';
-import whyLg    from '../assets/editorial/why-kamili-900.jpg';
-import knowLg   from '../assets/editorial/good-to-know-900.jpg';
+import heroSm   from '../assets/editorial/hero-520.webp';
+import heroLg   from '../assets/editorial/hero-1000.webp';
+import whySm    from '../assets/editorial/why-kamili-450.webp';
+import whyLg    from '../assets/editorial/why-kamili-900.webp';
+import knowLg   from '../assets/editorial/good-to-know-900.webp';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
 import { supabase } from '../lib/supabase';
 import { useSeo } from '../lib/seo';

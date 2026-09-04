@@ -34,9 +34,14 @@ const RESUME_MS = 9000;
 // derivable — but only when they exist, hence the guard: an older cover
 // with no variants falls back to the single file rather than 404ing.
 function coverSrcSet(url) {
-  if (!url || !url.includes('-cover.jpg')) return null;
-  const base = url.replace('-cover.jpg', '-cover');
-  return `${base}-380.jpg 380w, ${base}-760.jpg 760w`;
+  // Matches whatever extension the cover was stored with. This used to be
+  // hardcoded to '.jpg', so the moment the covers became .webp it silently
+  // returned null and every card fetched the full-size file instead of the
+  // 380w one — a regression with no error to notice.
+  const m = url && url.match(/^(.*-cover)\.(jpg|jpeg|webp|png)$/i);
+  if (!m) return null;
+  const [, base, ext] = m;
+  return `${base}-380.${ext} 380w, ${base}-760.${ext} 760w`;
 }
 
 export default function CategoryDeck({ categories = [], counts = {} }) {

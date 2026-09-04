@@ -11,6 +11,41 @@ const CartContext = createContext(null);
 const WHATSAPP_FALLBACK = '254114256994';
 const STORAGE_KEY       = 'kamili_cart';
 
+// ── Shop-data cache ─────────────────────────────────────────────────────
+// Categories and settings change rarely — a category is added now and then,
+// a phone number even less often — but they were fetched fresh on every page
+// load, and measured from a Kenyan connection a Supabase round trip costs
+// 370-680ms. That is time a returning visitor spent waiting to be told the
+// same four categories as last time.
+//
+// So they're cached, and the cached copy renders IMMEDIATELY on load while a
+// fresh fetch runs in the background and replaces it if anything changed.
+// A repeat visit paints its nav and category deck with no network wait at
+// all; a stale name for a few hundred milliseconds is a fair trade for that,
+// and the TTL caps how wrong it can ever be.
+//
+// Wrapped in try/catch throughout: localStorage throws outright in some
+// private-browsing modes and in the Instagram in-app browser, which is where
+// a lot of this traffic arrives from.
+const CACHE_KEY = 'kamili_shop_v1';
+const CACHE_TTL = 1000 * 60 * 30;   // 30 minutes
+
+function readCache() {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { at, categories, settings } = JSON.parse(raw);
+    if (!at || Date.now() - at > CACHE_TTL) return null;
+    return { categories, settings };
+  } catch { return null; }
+}
+
+function writeCache(categories, settings) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), categories, settings }));
+  } catch { /* storage unavailable — the app just fetches every time */ }
+}
+
 // 0712345678 / +254 712 345 678 / 254712345678 all -> 254712345678
 export function normaliseWaNumber(raw) {
   const digits = (raw || '').replace(/\D/g, '');
@@ -63,48 +98,55 @@ export function CartProvider({ children }) {
   const [waNumber,        setWaNumber]        = useState(WHATSAPP_FALLBACK);
   // The whole settings row, exposed so the footer can show real contact
   // details without a second query — this fetch already happens.
-  const [settings,        setSettings]        = useState(null);
+  const [settings,        setSettings]        = useState(() => readCache()?.settings ?? null);
   // Nav categories. Fetched here rather than in Navbar because BOTH Navbar and
   // MobileMenu need the same list — one fetch, one source of truth, no
   // duplicate query when the burger opens.
-  const [categories,      setCategories]      = useState([]);
+  // Seeded from cache so the very first render already has them.
+  const [categories,      setCategories]      = useState(() => readCache()?.categories ?? []);
 
   // Persist to both storage layers on every cart change.
   useEffect(() => {
     saveCart(items);
   }, [items]);
 
-  // C2: fetch vacation status once on mount; realtime update not needed
-  // (admin toggles it rarely; storefront customers will see it on next page load).
+  // Both shop-wide fetches live in ONE effect so the cache is written once,
+  // when both have landed, rather than each overwriting the other's half.
+  //
+  // The nav used to be a hardcoded array of Bags/Jewelry/Watches, which made
+  // admin -> Categories a half-feature: the owner could create a category and
+  // assign products to it, /category/<slug> rendered fine, and no customer
+  // could ever reach it. Now the nav IS the categories table.
   useEffect(() => {
-    supabase
-      .from('store_settings')
-      .select('*')
-      .eq('id', 'singleton')
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setSettings(data);
-          setVacationMode(!!data.vacation_mode);
-          setVacationMessage(data.vacation_message || '');
-          const n = normaliseWaNumber(data.whatsapp);
-          if (n) setWaNumber(n);
-        }
-      });
-  }, []);
+    let alive = true;
 
-  // The nav used to be a hardcoded array of Bags/Jewelry/Watches. That made
-  // admin -> Categories a half-working feature: the owner could create a
-  // category, products could be assigned to it, its page rendered fine at
-  // /category/<slug> — and no customer could ever reach it, because nothing
-  // linked there. Found it the moment "Sunglasses" was added for real.
-  // Now the nav IS the categories table; adding a category adds a nav link.
-  useEffect(() => {
-    supabase
-      .from('categories')
-      .select('name, slug')
-      .order('created_at')
-      .then(({ data }) => { if (data) setCategories(data); });
+    const settingsP = supabase
+      .from('store_settings').select('*').eq('id', 'singleton').single()
+      .then(({ data }) => data || null);
+
+    // `id` and `cover_url` are needed as well as name/slug: the category deck
+    // keys on id and renders cover_url. This selected only name and slug, so
+    // the moment the home page stopped fetching categories for itself and
+    // started reading them from here, every cover would have silently
+    // disappeared.
+    const catsP = supabase
+      .from('categories').select('id, name, slug, cover_url').order('created_at')
+      .then(({ data }) => data || null);
+
+    Promise.all([settingsP, catsP]).then(([st, cats]) => {
+      if (!alive) return;
+      if (st) {
+        setSettings(st);
+        setVacationMode(!!st.vacation_mode);
+        setVacationMessage(st.vacation_message || '');
+        const n = normaliseWaNumber(st.whatsapp);
+        if (n) setWaNumber(n);
+      }
+      if (cats) setCategories(cats);
+      if (st || cats) writeCache(cats ?? readCache()?.categories ?? [], st ?? readCache()?.settings ?? null);
+    });
+
+    return () => { alive = false; };
   }, []);
 
   // Real bug, not just a described one: the cart never checked stock. A
