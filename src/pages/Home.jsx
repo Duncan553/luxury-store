@@ -363,13 +363,16 @@ export default function Home() {
             <figure className="editorial__img-wrap">
               {/* Was a stock colour jewellery shot with alt="Editorial" — a
                   filler image labelled with the name of the section it sat
-                  in. Replaced with a mono plate from the same grade as the
-                  hero: real hands holding a real bag, no face. */}
+                  in. Replaced with a mono plate on the same grade as the
+                  hero — a Black woman's hand holding the bag, no face in
+                  frame. Alt text describes what's actually in the picture
+                  rather than naming the section, which is what a screen
+                  reader user needs. */}
               <img
                 src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg"
                 srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-450.jpg 450w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg 900w"
                 sizes="(max-width: 859px) 92vw, 40vw"
-                alt="Two hands holding a structured leather tote"
+                alt="A hand wearing bangles holding a striped leather handbag"
                 width="900" height="1125"
                 loading="lazy"
                 className="img-cover editorial__img"
