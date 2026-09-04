@@ -409,7 +409,12 @@
   /* The plate alone sets this box's height; the words are positioned out
      of flow over it. */
   display: flex;
-  justify-content: center;
+  /* LEFT, not centred. Centred inside its column the masthead lined up
+     with nothing — every other title on the page ("Shop by Category",
+     "Real pieces, sorted fast.") starts at the container's left edge, so
+     the opening was the one element floating on its own axis. Aligning it
+     left gives the page a single left margin from the hero down. */
+  justify-content: flex-start;
   margin-bottom: 22px;
   isolation: isolate;   /* keeps these z-indexes out of the page's stack */
 }
@@ -423,8 +428,8 @@
      sat centred on the plate with their middles covered.
      Absolute offsets use top/bottom, which framer does not touch. */
   position: absolute;
-  left: 50%;
-  translate: -50% 0;
+  /* Flush left with the stack, which is flush left with the container. */
+  left: 0;
   font-family: var(--font-head);
   /* Big and heavy — the display face carried at 600 so it reads as a
      masthead rather than as elegant body copy blown up. */
@@ -464,7 +469,6 @@
      of different lengths rather than as one masthead. The last letter's
      trailing space is pulled back so the right edge lines up too. */
   letter-spacing: 0.135em;
-  padding-left: 0.135em;   /* re-centres it: tracking pushes right only */
   color: transparent;
   -webkit-text-stroke: 1px rgba(240, 235, 225, 0.32);
   /* Lifted so the word sits ABOVE the plate with only its base tucked
@@ -495,6 +499,10 @@
      composition. On desktop (below) the plate goes back up to 76%. */
   width: 62%;
   max-width: 470px;
+  /* Indented so the first letters of each word read clear of the photo
+     before it starts. With both flush left they shared an edge and the
+     word looked cropped rather than layered. */
+  margin-left: 14%;
 }
 .hero__plate img {
   display: block;

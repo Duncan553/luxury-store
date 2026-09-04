@@ -188,13 +188,10 @@ export default function Home() {
               the one red accent in the palette stay the only colour on the
               page. */}
           <div className="hero__grid">
-            <motion.span className="hero__kicker"
-              initial={{ opacity: 0, letterSpacing: '0.6em' }}
-              animate={{ opacity: 1, letterSpacing: '0.3em' }}
-              transition={{ duration: 1.1, ease, delay: 0.4 }}>
-              Nairobi · Est. 2024
-            </motion.span>
-
+            {/* "Nairobi · Est. 2024" removed. It was a third piece of type
+                competing with a masthead that already says everything the
+                opening needs to; the shop's location and history live on the
+                About page, where someone is actually asking. */}
             <div className="hero__stack">
               {/* Layer 1 — behind the photo. */}
               <motion.h1 className="hero__word hero__word--back"
