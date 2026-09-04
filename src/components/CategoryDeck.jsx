@@ -2,8 +2,8 @@
 //
 // Shape of it: the active category sits front and centre at full size, the
 // ones either side recede — scaled down, rotated back in 3D, dimmed — and
-// the deck advances on its own. Clicking a side card brings it forward;
-// clicking the front card opens that category.
+// the deck advances on its own. Clicking ANY card image opens that
+// category's page; the arrows, dots, keyboard and drag move the deck.
 //
 // Two things this has to get right that a plain grid didn't:
 //
@@ -25,7 +25,8 @@
 // the full list also still lives in the nav and on the homepage, which is
 // what stops this being the only route in.
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { flushSync } from 'react-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useReducedMotion } from 'framer-motion';
 import './CategoryDeck.css';
 
@@ -47,12 +48,16 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
   // Once the visitor drives, autoplay is done for the session.
   const [userTook, setUserTook] = useState(false);
   const reduce = useReducedMotion();
+  const navigate = useNavigate();
   // Drag state lives in refs, not state: it changes every frame and must
   // never trigger a React render.
   const dragging = useRef(false);
   const startX   = useRef(0);
   const dx       = useRef(0);
   const stageRef = useRef(null);
+  // True when the gesture that just ended was a drag, so the click that
+  // follows it is swallowed instead of navigating.
+  const wasDrag  = useRef(false);
 
   const n = categories.length;
 
@@ -119,9 +124,38 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
     // A short flick counts as much as a long drag; threshold scales with the
     // card so it feels the same on a phone and a laptop.
     const threshold = (stage?.offsetWidth || 300) * 0.12;
+    // Remember whether this gesture was a drag, so the click that fires
+    // immediately after doesn't navigate. Without this, every swipe would
+    // also open whichever category you happened to start the swipe on.
+    wasDrag.current = Math.abs(dx.current) > 6;
     if (Math.abs(dx.current) > threshold) take(active + (dx.current < 0 ? 1 : -1));
-    else if (Math.abs(dx.current) > 4) setUserTook(true); // touched it, even if it didn't move
+    else if (wasDrag.current) setUserTook(true);
     dx.current = 0;
+  }
+
+  // Clicking ANY card image opens that category — front card or side card.
+  //
+  // Smoothness comes from a real View Transition where the browser supports
+  // one: the old page is captured, React commits the new route inside the
+  // transition, and the browser cross-fades between the two instead of the
+  // page swapping in a single hard frame. flushSync is what makes that work
+  // — startViewTransition snapshots, runs this callback, then waits one
+  // frame, so React has to commit synchronously inside it or the browser
+  // captures the OLD DOM twice and you see no transition at all.
+  //
+  // Everything is wrapped so navigation can never be the thing that fails:
+  // no support, reduced motion, or a throw all fall through to a plain
+  // navigate.
+  function openCategory(e, slug) {
+    if (wasDrag.current) { e.preventDefault(); wasDrag.current = false; return; }
+    const openIt = () => navigate(`/category/${slug}`);
+    if (reduce || typeof document.startViewTransition !== 'function') return; // let the Link do it
+    e.preventDefault();
+    try {
+      document.startViewTransition(() => flushSync(openIt));
+    } catch {
+      openIt();
+    }
   }
 
   return (
@@ -158,41 +192,36 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
               style={{ '--d': d, zIndex: 20 - Math.abs(d), pointerEvents: far ? 'none' : 'auto' }}
               aria-hidden={far ? 'true' : undefined}
             >
-              {isActive ? (
-                // The front card is a real link — it's the one you can open.
-                <Link to={`/category/${c.slug}`} className="deck__hit" aria-label={`Shop ${c.name}`}>
-                  {c.cover_url
-                    ? <img
-                        className="deck__img"
-                        src={c.cover_url}
-                        {...(srcSet ? { srcSet, sizes: '(max-width: 719px) 62vw, 300px' } : {})}
-                        alt={c.name}
-                        width="760" height="1013"
-                      />
-                    : <div className="deck__ph" />}
-                </Link>
-              ) : (
-                // Side cards bring themselves forward instead of navigating:
-                // tapping a half-hidden, rotated card to buy something is a
-                // mis-tap waiting to happen.
-                <button
-                  type="button"
-                  className="deck__hit"
-                  onClick={() => take(i)}
-                  aria-label={`Show ${c.name}`}
-                >
-                  {c.cover_url
-                    ? <img
-                        className="deck__img"
-                        src={c.cover_url}
-                        {...(srcSet ? { srcSet, sizes: '(max-width: 719px) 46vw, 230px' } : {})}
-                        alt=""
-                        loading="lazy"
-                        width="760" height="1013"
-                      />
-                    : <div className="deck__ph" />}
-                </button>
-              )}
+              {/* Every card is a link now, side cards included: clicking an
+                  image goes straight to that category's URL. It stays a real
+                  <Link> rather than an onClick handler so middle-click,
+                  cmd-click and "copy link address" all behave, and so it
+                  still works if the JS transition path is unavailable. */}
+              <Link
+                to={`/category/${c.slug}`}
+                className="deck__hit"
+                aria-label={`Shop ${c.name}`}
+                tabIndex={far ? -1 : 0}
+                draggable={false}
+                onClick={(e) => openCategory(e, c.slug)}
+              >
+                {c.cover_url
+                  ? <img
+                      className="deck__img"
+                      src={c.cover_url}
+                      {...(srcSet ? {
+                        srcSet,
+                        sizes: isActive
+                          ? '(max-width: 719px) 62vw, 300px'
+                          : '(max-width: 719px) 46vw, 230px',
+                      } : {})}
+                      alt={c.name}
+                      loading={isActive ? undefined : 'lazy'}
+                      draggable={false}
+                      width="760" height="1013"
+                    />
+                  : <div className="deck__ph" />}
+              </Link>
 
               <div className="deck__meta">
                 <span className="deck__name">{c.name}</span>

@@ -259,3 +259,13 @@
   .deck__card { transition: none; }
   .deck__blurb { animation: none; }
 }
+
+/* View-transition cross-fade for card -> category navigation.
+   Only shapes the transition the browser is already running; if the API
+   isn't supported these rules are inert and the Link navigates normally. */
+::view-transition-old(root) { animation-duration: 0.22s; }
+::view-transition-new(root) { animation-duration: 0.28s; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+}

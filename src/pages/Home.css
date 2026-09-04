@@ -67,22 +67,16 @@
 }
 
 /* Two-column layout: copy left, animated showcase right. */
+/* Single column since the showcase panel was removed. The hero type was
+   previously boxed into 640px to leave room for that panel; with the panel
+   gone it can run to a proper display measure instead of wrapping early
+   against empty space. */
 .hero__grid {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: 1fr;
   align-items: center;
-  gap: 56px;
 }
-.hero__text { max-width: 640px; }
-
-@media (max-width: 1024px) {
-  /* Showcase drops out entirely rather than stacking below the fold —
-     see the comment on hero__showcase-col in Home.jsx: it's a nice-to-have
-     on a spacious viewport, not worth pushing real CTAs down a phone
-     screen for. */
-  .hero__grid { grid-template-columns: 1fr; }
-  .hero__showcase-col { display: none; }
-}
+.hero__text { max-width: 52ch; }
 
 .hero__accent-line {
   width: 56px; height: 1px;
@@ -95,10 +89,17 @@
 }
 
 /* Split heading — solid + outline */
-.hero__heading-wrap { margin-bottom: 28px; }
+.hero__heading-wrap { margin-bottom: clamp(12px, 2.6vh, 28px); }
 .hero__heading {
   font-family: var(--font-head);
-  font-size: clamp(3.8rem, 9vw, 8.5rem);
+  /* Sized against the SMALLER of width and height, not width alone.
+     With 9vw the four display lines plus sub, SEO line and buttons came to
+     more than a short window could show: "Shop Now" measured at 688px in a
+     642px viewport — the primary CTA sat below the fold, and since the hero
+     fades out on scroll it faded before you could ever reach it. vmin ties
+     the type to whichever axis is actually scarce, so a laptop with a short
+     window gets smaller type instead of a hidden button. */
+  font-size: clamp(2.8rem, 7.2vmin + 1.2vw, 8.5rem);
   font-weight: 300; line-height: 0.92;
   color: var(--text); letter-spacing: -0.03em;
   will-change: transform;
@@ -112,7 +113,10 @@
 
 .hero__sub {
   font-size: clamp(0.88rem, 1.3vw, 1rem); color: var(--muted);
-  max-width: 380px; line-height: 1.85; margin-bottom: 48px; font-weight: 300;
+  max-width: 380px; line-height: 1.75; font-weight: 300;
+  /* Was a flat 48px. Scales now so the gap gives up room before the button
+     does. */
+  margin-bottom: clamp(18px, 3.5vh, 48px);
 }
 .hero__ctas { display: flex; gap: 16px; flex-wrap: wrap; }
 .hero__btn-primary { background: var(--gold); color: var(--bg); }
@@ -392,3 +396,14 @@
   .hero__seo-line { font-size: 11px; }
 }
 
+
+/* A short window (a laptop with browser chrome, or a phone in landscape)
+   can't fit four lines of display type AND the calls to action. The
+   outlined third/fourth line is the decorative half of the headline, so
+   that is what gives way — the copy that sells and the buttons that
+   convert both stay above the fold. */
+@media (max-height: 700px) {
+  .hero__heading--outline { display: none; }
+  .hero__sub { margin-bottom: 16px; }
+  .hero__heading-wrap { margin-bottom: 10px; }
+}

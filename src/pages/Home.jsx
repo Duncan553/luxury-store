@@ -7,7 +7,6 @@ import Tilt from 'react-parallax-tilt';
 import { supabase } from '../lib/supabase';
 import ProductCard from '../components/ProductCard';
 import Lightbox from '../components/Lightbox';
-import HeroShowcase from '../components/HeroShowcase';
 import { useSeo } from '../lib/seo';
 import './Home.css';
 
@@ -240,15 +239,13 @@ export default function Home() {
               </motion.div>
             </div>
 
-            {/* Hidden on small screens (see Home.css) — the animated gradient
-                stage is a nice-to-have on a spacious viewport, not something
-                worth pushing the real CTAs further down a phone screen for. */}
-            <motion.div className="hero__showcase-col"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.9, ease, delay: 0.5 }}>
-              <HeroShowcase />
-            </motion.div>
+            {/* The showcase panel that sat here is gone — an auto-cycling
+                product tile on a red gradient with its own Bags/Jewelry/
+                Watches tabs and a "Shop Bags" link. It duplicated what the
+                category deck further down the page already does properly,
+                competed with the headline for the opening moment, and
+                squeezed the hero type into half the width for a panel that
+                was hidden on phones anyway. */}
           </div>
         </motion.div>
 
