@@ -207,14 +207,6 @@
   gap: 40px;
 }
 .about-how__item { border-top: 1px solid var(--border); padding-top: 20px; }
-.about-how__num {
-  display: block;
-  font-family: var(--font-head);
-  font-size: 12px;
-  letter-spacing: 0.2em;
-  color: var(--accent-text);
-  margin-bottom: 12px;
-}
 .about-how__h {
   font-family: var(--font-head);
   font-size: 1.15rem;
@@ -307,15 +299,6 @@
   text-transform: uppercase;
   color: var(--muted2);
 }
-.aed__eyebrow {
-  font-family: var(--font-body);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--accent-text);
-  margin-bottom: 14px;
-}
 .aed__h {
   font-family: var(--font-head);
   font-size: clamp(2rem, 7vw, 3.4rem);
@@ -328,33 +311,6 @@
 }
 /* The lede carries the drop cap and sits a step larger than the body —
    typographic contrast is what separates an article from a wall of text. */
-.aed__lede,
-.aed__p {
-  font-family: var(--font-read);
-  color: var(--muted);
-  /* ~65 characters: the measure that stops the eye losing its place on the
-     return sweep. Without it these lines ran the full column width. */
-  max-width: 62ch;
-}
-.aed__lede {
-  font-size: 19px;
-  line-height: 1.62;
-  color: #cfc9c4;
-  margin-bottom: 18px;
-}
-.aed__p {
-  font-size: 16.5px;
-  line-height: 1.75;
-  margin-bottom: 14px;
-}
-.aed__lede::first-letter {
-  float: left;
-  font-family: var(--font-head);
-  font-size: 3.4em;
-  line-height: 0.82;
-  padding: 6px 10px 0 0;
-  color: var(--gold-light);
-}
 
 @media (min-width: 860px) {
   /* The asymmetry: text takes the wider track and leads, the photo is the
@@ -403,4 +359,34 @@
 }
 @media (min-width: 900px) {
   .about-plate img { aspect-ratio: 21 / 9; }
+}
+
+/* ── Display titles ───────────────────────────────────────────────────
+   Section titles at real display scale. They were near body size, which
+   is what made the page read as a document with headings rather than a
+   magazine with spreads. */
+.ed-display {
+  font-family: var(--font-head);
+  font-size: clamp(2.3rem, 5.5vw, 4.2rem);
+  font-weight: 300;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* How It Works items now stack a numeral behind the text, so each needs
+   its own positioning context and room for the figure to sit in. */
+.about-how__item {
+  position: relative;
+  border-top: 1px solid var(--border);
+  padding-top: 34px;
+  isolation: isolate;
+}
+.about-how__h,
+.about-how__b { position: relative; z-index: 1; }
+.about-how__b {
+  font-family: var(--font-read);
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--muted);
 }

@@ -171,7 +171,7 @@ export default function About() {
         <div className="container">
           <p className="section-eyebrow">Our Story</p>
           <h1 className="about-hero__title">Kamili</h1>
-          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp, shipped worldwide.</p>
+          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp.</p>
         </div>
       </div>
 
@@ -206,23 +206,30 @@ export default function About() {
             <figcaption className="aed__cap">Nairobi, Kenya — est. 2024</figcaption>
           </figure>
 
-          <div className="aed__col reveal">
-            <p className="aed__eyebrow">Who we are</p>
+          {/* Opens the way a print feature opens: kicker over a hairline
+              rule, headline, a standfirst carrying the story in two lines,
+              then the body in columns with a drop cap marking where to
+              start. reveal-stagger brings the parts in one after another
+              instead of the block landing all at once. */}
+          <div className="aed__col reveal reveal-stagger">
+            <span className="ed-kicker">Who we are</span>
             <h2 className="aed__h">Bags, jewellery<br />&amp; watches.</h2>
-            <p className="aed__lede">
-              Kamili is a shop in Nairobi selling bags, jewellery and watches.
-              We buy stock in and sell it on — we're not the manufacturer.
+            <p className="ed-standfirst">
+              A shop in Nairobi selling bags, jewellery and watches. We buy
+              stock in and sell it on — we're not the manufacturer.
             </p>
-            <p className="aed__p">
-              Orders happen on WhatsApp. Send us what you want and we'll reply
-              with the delivery cost for your area before you pay anything. If
-              you want more photos of a piece first, just ask.
-            </p>
-            <p className="aed__p">
-              We ship from Nairobi to the rest of Kenya and to customers
-              outside it. Wherever you are, the cost of getting it to you is
-              quoted before you pay — never after.
-            </p>
+            <div className="ed-columns">
+              <p className="ed-dropcap">
+                Orders happen on WhatsApp. Send us what you want and we'll
+                reply with the delivery cost for your area before you pay
+                anything. If you want more photos of a piece first, just ask.
+              </p>
+              <p>
+                We deliver from Nairobi to anywhere in Kenya. Wherever you are
+                in the country, the cost of getting it to you is quoted before
+                you pay — never after.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -285,9 +292,9 @@ export default function About() {
           that isn't ordered would be decoration. */}
       <section className="section-sm">
         <div className="container">
-          <p className="section-eyebrow reveal">Before You Order</p>
-          <h2 className="section-title reveal" style={{ marginBottom: 40 }}>How It Works</h2>
-          <div className="about-how reveal">
+          <span className="ed-kicker reveal">Before you order</span>
+          <h2 className="section-title reveal ed-display" style={{ marginBottom: 44 }}>How It Works</h2>
+          <div className="about-how reveal reveal-stagger">
             {[
               {
                 n: '01',
@@ -301,12 +308,16 @@ export default function About() {
               },
               {
                 n: '03',
-                h: 'Kenya or anywhere else',
-                b: 'Nairobi deliveries are arranged directly. Everywhere else — the rest of Kenya or another country — goes by courier, with tracking details once it ships. Tell us your address and we\'ll quote it.',
+                h: 'Anywhere in Kenya',
+                b: 'Nairobi deliveries are arranged directly. Everywhere else in the country goes by courier, with tracking details once it ships. Tell us your address and we\'ll quote it.',
               },
             ].map((step) => (
               <div key={step.n} className="about-how__item">
-                <span className="about-how__num">{step.n}</span>
+                {/* The numeral sits BEHIND the heading as an outlined folio
+                    figure rather than beside it as a small label — print
+                    uses the number as texture marking the sequence, not as
+                    a caption competing with the heading. */}
+                <span className="ed-numeral" aria-hidden="true">{step.n}</span>
                 <h3 className="about-how__h">{step.h}</h3>
                 <p className="about-how__b">{step.b}</p>
               </div>
@@ -332,9 +343,9 @@ export default function About() {
       <section className="section-sm">
         <div className="container">
           <div className="about-bulk reveal">
-            <div className="about-bulk__text">
-              <p className="section-eyebrow">Buying More Than One</p>
-              <h2 className="about-bulk__title">Bulk &amp; resale orders</h2>
+            <div className="about-bulk__text reveal-stagger visible">
+              <span className="ed-kicker">Buying more than one</span>
+              <h2 className="about-bulk__title ed-display">Bulk &amp; resale orders</h2>
               <p className="about-bulk__body">
                 Stocking a shop, buying for a group, or sorting gifts for an
                 event? Tell us the pieces and the quantity and we'll quote you
@@ -344,7 +355,7 @@ export default function About() {
               <ul className="about-bulk__list">
                 <li>Mixed orders are fine — bags, watches and jewellery on one invoice.</li>
                 <li>We'll confirm what's in stock and what needs to be sourced, with a realistic date.</li>
-                <li>Delivery anywhere we ship, quoted per order.</li>
+                <li>Delivery anywhere in Kenya, quoted per order.</li>
               </ul>
               {settings?.whatsapp && (
                 <a
@@ -385,8 +396,8 @@ export default function About() {
           across from tablet up. */}
       <section className="section about-cats">
         <div className="container">
-          <p className="section-eyebrow reveal">What We Carry</p>
-          <h2 className="section-title reveal" style={{ marginBottom: 40 }}>Categories</h2>
+          <span className="ed-kicker reveal">What we carry</span>
+          <h2 className="section-title reveal ed-display" style={{ marginBottom: 40 }}>Categories</h2>
           {/* Coverflow deck rather than a static grid: the active category
               is front and centre, the others fan back in 3D, and it moves
               on its own. Blurbs are attached to each category here so the

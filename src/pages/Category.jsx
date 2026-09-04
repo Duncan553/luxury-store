@@ -29,7 +29,7 @@ export default function Category() {
   // The ItemList JSON-LD hands Google the names and prices on this page.
   useSeo({
     title: `${label} in Nairobi — Authentic & Pre-loved`,
-    description: `Shop ${filtered.length || ''} ${label.toLowerCase()} at Kamili Nairobi. Shipped across Kenya and worldwide, ordered on WhatsApp.`.replace('  ', ' '),
+    description: `Shop ${filtered.length || ''} ${label.toLowerCase()} at Kamili Nairobi. Delivered across Kenya, ordered on WhatsApp.`.replace('  ', ' '),
     path: `/category/${name}`,
     image: filtered[0]?.image_url,
     jsonLd: productListJsonLd(filtered, label),
@@ -59,7 +59,7 @@ export default function Category() {
           <h1 className="cat-hero__title">{label}</h1>
           {/* Sub-headline carries the keywords a bare noun H1 can't. */}
           <p className="cat-hero__blurb">
-            Authentic &amp; pre-loved {label.toLowerCase()} in Nairobi · shipped worldwide
+            Authentic &amp; pre-loved {label.toLowerCase()} in Nairobi
           </p>
           <p className="cat-hero__count">
             {loading ? '' : `${filtered.length} ${filtered.length === 1 ? 'piece' : 'pieces'}`}

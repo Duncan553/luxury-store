@@ -606,15 +606,18 @@
 .editorial__img-wrap { margin: 0; }
 
 /* Bento section header: display scale, not a centred marketing lockup. */
+/* Kicker over a rule, matching the About spread and the section above. */
 .bento-section .section-eyebrow {
   display: block;
   font-family: var(--font-body);
   font-size: 9.5px;
   font-weight: 600;
-  letter-spacing: 0.28em;
+  letter-spacing: 0.3em;
   text-transform: uppercase;
   color: var(--accent-text);
-  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 26px;
 }
 .bento-section .section-title {
   font-family: var(--font-head);
@@ -622,6 +625,7 @@
      body scale, which is what made the section read as a footer rather
      than as a spread. */
   font-size: clamp(2.4rem, 6vw, 4.6rem);
+  max-width: 22ch;
   font-weight: 300;
   line-height: 0.98;
   letter-spacing: -0.03em;

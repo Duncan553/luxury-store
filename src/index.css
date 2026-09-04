@@ -296,3 +296,118 @@ select option { background: var(--surface2); }
 @media (max-width: 480px) {
   .products-grid { grid-template-columns: repeat(2, 1fr); gap: 1px; }
 }
+
+/* ═══ EDITORIAL KIT ═══════════════════════════════════════════════════
+   The devices that actually make a page read as a magazine spread rather
+   than a styled webpage, factored out so the landing page and About use
+   the same ones. Taken from how print editorial opens a story: a kicker
+   over a hairline rule, a standfirst set larger than the body, a drop cap
+   marking the entry point, body text in columns, and an oversized numeral
+   sitting behind the content rather than beside it. */
+
+/* ── Kicker over a rule ─────────────────────────────────────────────── */
+.ed-kicker {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 26px;
+}
+
+/* ── Standfirst ─────────────────────────────────────────────────────── */
+/* The paragraph that sits between the headline and the body, set a clear
+   step larger. Print uses it to carry the whole story in two sentences —
+   it's the piece that tells you whether to keep reading. */
+.ed-standfirst {
+  font-family: var(--font-read);
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.5;
+  color: #cfc9c4;
+  max-width: 34ch;
+  margin: 0 0 22px;
+}
+
+/* ── Drop cap ───────────────────────────────────────────────────────── */
+.ed-dropcap::first-letter {
+  float: left;
+  font-family: var(--font-head);
+  font-size: 4.1em;
+  line-height: 0.78;
+  font-weight: 500;
+  padding: 8px 12px 0 0;
+  color: var(--accent-text);
+}
+
+/* ── Body in columns ────────────────────────────────────────────────── */
+/* Two columns only where there's width for both to keep a sane measure.
+   A single column that runs the full page is the thing that makes long
+   copy feel like a document instead of an article. */
+.ed-columns {
+  font-family: var(--font-read);
+  font-size: 15.5px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+@media (min-width: 900px) {
+  .ed-columns {
+    column-count: 2;
+    column-gap: 44px;
+    /* A rule between columns, as print sets it. */
+    column-rule: 1px solid var(--border);
+  }
+  /* Never leave one line of a paragraph stranded at a column break. */
+  .ed-columns p { orphans: 3; widows: 3; break-inside: avoid-column; }
+}
+.ed-columns p + p { margin-top: 14px; }
+
+/* ── Oversized numeral ──────────────────────────────────────────────── */
+/* Sits BEHIND the text at low opacity, which is how print uses a folio
+   number — as texture that marks the sequence, not as a label competing
+   with the heading. */
+.ed-numeral {
+  position: absolute;
+  top: -0.34em;
+  left: -0.04em;
+  z-index: 0;
+  font-family: var(--font-head);
+  font-size: clamp(5.5rem, 11vw, 10rem);
+  font-weight: 500;
+  line-height: 0.8;
+  letter-spacing: -0.05em;
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(240, 235, 225, 0.13);
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Staggered reveal ───────────────────────────────────────────────── */
+/* Paragraphs arrive one after another instead of the whole block landing
+   at once. Staggering by BLOCK rather than by line on purpose: per-line
+   splitting means one animated element per line, and on a low-end Android
+   that many simultaneously animating nodes is where scroll jank comes
+   from. Only transform and opacity animate, so this stays on the
+   compositor. */
+.reveal-stagger > * { transition-delay: 0ms; }
+.reveal-stagger.visible > *:nth-child(1) { transition-delay: 0ms; }
+.reveal-stagger.visible > *:nth-child(2) { transition-delay: 90ms; }
+.reveal-stagger.visible > *:nth-child(3) { transition-delay: 180ms; }
+.reveal-stagger.visible > *:nth-child(4) { transition-delay: 270ms; }
+.reveal-stagger.visible > *:nth-child(5) { transition-delay: 360ms; }
+.reveal-stagger.visible > *:nth-child(6) { transition-delay: 450ms; }
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.55s var(--ease-out), transform 0.55s var(--ease-out);
+}
+.reveal-stagger.visible > * { opacity: 1; transform: none; }
+
+/* The whole kit backs off when the OS asks. Text still appears — it just
+   doesn't travel. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal-stagger > * { transition-duration: 0.01ms; transform: none; }
+}

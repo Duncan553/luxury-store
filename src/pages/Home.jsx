@@ -99,7 +99,7 @@ export default function Home() {
   // what we sell, where we are, and how ordering works.
   useSeo({
     title: 'Luxury Bags, Jewellery & Watches in Nairobi',
-    description: 'Bags, jewellery and watches from Nairobi, shipped across Kenya and worldwide. Order on WhatsApp.',
+    description: 'Bags, jewellery and watches from Nairobi, delivered across Kenya. Order on WhatsApp.',
     path: '/',
   });
 
@@ -230,9 +230,9 @@ export default function Home() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.9, ease, delay: 1.15 }}>
-                Bags, jewellery and watches, sold out of Nairobi and shipped
-                worldwide. Ordered on WhatsApp — we confirm what's in stock and
-                what delivery costs before you pay.
+                Bags, jewellery and watches, sold out of Nairobi. Ordered on
+                WhatsApp — we confirm what's in stock and what delivery costs
+                before you pay.
               </motion.p>
 
               <motion.div className="hero__ctas"
@@ -249,7 +249,7 @@ export default function Home() {
               <motion.h2 className="hero__seo-line"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, ease, delay: 0.6 }}>
-                Bags, jewellery &amp; watches from Nairobi — shipped across Kenya and worldwide
+                Bags, jewellery &amp; watches in Nairobi
               </motion.h2>
             </div>
           </div>
@@ -310,23 +310,25 @@ export default function Home() {
       {/* ═══ EDITORIAL SPLIT ════════════════════════════════════════════ */}
       <section className="editorial section">
         <div className="container editorial__inner">
-          <Reveal className="editorial__text" delay={0.1}>
-            <span className="section-eyebrow">Why Kamili</span>
+          <Reveal className="editorial__text reveal-stagger visible" delay={0.1}>
+            {/* Kicker over a hairline rule, as the About spread opens. The
+                bare eyebrow was floating with nothing anchoring it. */}
+            <span className="ed-kicker">Why Kamili</span>
             <h2 className="editorial__heading">
               Real pieces,<br />sorted fast.
             </h2>
             {/* Two things were wrong here. "Sold from Nairobi" with no
                 further scope read as Nairobi-only, when Kamili ships
-                worldwide — understating your own reach is still telling the
-                customer something untrue. And "no waiting on a courier you
+                Kenya — the scope has to match what the shop actually does,
+                in either direction. And "no waiting on a courier you
                 can't reach" was a swipe at couriers Kamili itself depends on
                 to deliver: a promise the shop is not in a position to keep.
                 Nairobi stays because it's where the shop is (and it's what
                 local buyers search for); the scope is now stated plainly. */}
             <p className="editorial__body">
-              Bags, jewelry and watches, sold out of Nairobi and shipped
-              worldwide. Message us on WhatsApp and we'll confirm what's in
-              stock and what delivery to your address costs, before you pay.
+              Bags, jewelry and watches, sold out of Nairobi. Message us on
+              WhatsApp and we'll confirm what's in stock and what delivery to
+              your address costs, before you pay.
             </p>
             {/* Both numbers are live, not written-in: productCount comes from
                 an exact DB count (see the fetch above), categories.length
@@ -389,7 +391,11 @@ export default function Home() {
       {/* ═══ BENTO PROMISE ══════════════════════════════════════════════ */}
       <section className="bento-section section">
         <div className="container">
-          <Reveal style={{ textAlign: 'center', marginBottom: 48 }}>
+          {/* Was centred. Print doesn't centre a section head above a
+              left-aligned grid — it left-aligns both so the section shares
+              the page's single margin, which is what the hero and every
+              other block on this page now do. */}
+          <Reveal style={{ marginBottom: 48 }}>
             {/* Was "Why Kamili / The Standard We Hold Ourselves To" — a
                 heading about Kamili's own character rather than about
                 anything the customer needs. A shop that announces its
@@ -433,8 +439,8 @@ export default function Home() {
             </motion.div>
 
             <motion.div variants={itemV} className="bento-card bento-card--sm">
-              <h3 className="bento-card__title">Nairobi-Based, Ships Worldwide</h3>
-              <p className="bento-card__desc">Based in Nairobi, shipping across Kenya and internationally. Cost quoted per address.</p>
+              <h3 className="bento-card__title">Nairobi-Based, Delivers Countrywide</h3>
+              <p className="bento-card__desc">Based in Nairobi, delivering anywhere in Kenya. Cost quoted for your area.</p>
             </motion.div>
 
             {/* Was "Personal Touch — every order fulfilled personally, with
