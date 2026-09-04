@@ -165,3 +165,47 @@
   .lb-nav--next { right: 8px; }
   .lb-nav { width: 38px; height: 38px; font-size: 18px; }
 }
+
+/* ── Colours available ────────────────────────────────────────────────
+   Sits between the price and the stock status: the buyer's order of
+   questions is what is it, what does it cost, can I get it in my colour,
+   is it in stock. */
+.lb-colours { margin: 18px 0 4px; }
+.lb-colours__label {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  margin-bottom: 10px;
+}
+.lb-colours__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+/* The name is always shown next to the swatch, never the swatch alone.
+   Colour on its own fails for anyone who can't distinguish the two chips —
+   and "the dark one" is not something a customer can quote on WhatsApp. */
+.lb-colour {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--border);
+  padding: 6px 11px 6px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.lb-colour__dot {
+  width: 13px; height: 13px;
+  border-radius: 50%;
+  /* Ring on every swatch so a white or cream chip is still visible against
+     the dark panel. */
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28);
+  flex-shrink: 0;
+}

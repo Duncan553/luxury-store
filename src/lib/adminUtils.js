@@ -5,7 +5,29 @@ export const STATUSES = ['Available', 'Low Stock', 'Pre-Order', 'Out of Stock'];
 
 export const BLANK_PRODUCT = {
   name: '', price: '', category: '', status: 'Available', quantity: '',
+  // Free text in the form ("Black, Tan"); parsed to a text[] on save.
+  colours: '',
 };
+
+// "Black, Tan , tan," -> ['Black','Tan'].
+// Splits on commas, trims, drops blanks, and de-duplicates case-insensitively
+// so a double entry doesn't show the same swatch twice to a customer.
+// Returns null (not []) for empty input: the storefront treats null as
+// "not recorded" and hides the colour row, which is a different statement
+// from "available in no colours".
+export function parseColours(raw) {
+  const seen = new Set();
+  const out = [];
+  for (const part of String(raw || '').split(',')) {
+    const c = part.trim();
+    if (!c) continue;
+    const key = c.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(c);
+  }
+  return out.length ? out : null;
+}
 
 export const BLANK_SETTINGS = {
   whatsapp: '', phone: '', email: '', instagram: '',

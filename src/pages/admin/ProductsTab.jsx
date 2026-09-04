@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../lib/supabase';
 import { handleImgSelect, uploadImage, removeBackground } from '../../lib/imageUpload';
-import { STATUSES, BLANK_PRODUCT, statusFromQty, fmt } from '../../lib/adminUtils';
+import { STATUSES, BLANK_PRODUCT, statusFromQty, fmt, parseColours } from '../../lib/adminUtils';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function Toast({ msg, type }) {
@@ -289,6 +289,7 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
         category:  form.category || null,
         status,
         quantity:  qty,
+        colours:   parseColours(form.colours),
         image_url,
         created_at: new Date().toISOString(),
       }).select().single();
@@ -374,6 +375,29 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
                 {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
+          </div>
+
+          {/* One plain text box rather than a colour picker or a tag widget:
+              the owner types what they'd say on WhatsApp ("Black, Tan") and
+              it becomes swatches on the storefront. Left empty, the product
+              simply shows no colour row — nothing to undo, nothing to get
+              wrong. */}
+          <div className="form-group">
+            <label className="form-label" htmlFor="p-colours">
+              Colours
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--muted2)', fontSize: 12, marginLeft: 6 }}>
+                optional — separate with commas
+              </span>
+            </label>
+            <input id="p-colours" type="text" value={form.colours}
+              onChange={e => set('colours', e.target.value)}
+              placeholder="e.g. Black, Tan, Cream" />
+            {parseColours(form.colours) && (
+              <p style={{ fontSize: 12, color: 'var(--muted2)', marginTop: 6 }}>
+                Shows as {parseColours(form.colours).length} colour
+                {parseColours(form.colours).length !== 1 ? 's' : ''}: {parseColours(form.colours).join(' · ')}
+              </p>
+            )}
           </div>
 
           {error && <p className="form-error">{error}</p>}

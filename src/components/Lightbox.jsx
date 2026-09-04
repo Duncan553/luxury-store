@@ -9,6 +9,20 @@ const WA_ICON = (
   </svg>
 );
 
+// Named colours -> the hex actually painted in the swatch. Deliberately a
+// lookup rather than passing the owner's text straight to CSS: "navy blue"
+// or a misspelling would otherwise resolve to transparent or, worse, to
+// some unrelated CSS colour keyword, and show a buyer the wrong colour.
+// Anything unrecognised falls back to an outlined chip with the name in it.
+const SWATCH = {
+  black: '#111111',   white: '#f5f5f5',  cream: '#efe6d6',  beige: '#d9c7ab',
+  tan: '#c08a4e',     brown: '#6b4423',  camel: '#c19a6b',
+  grey: '#8a8a8a',    gray: '#8a8a8a',   silver: '#c0c0c0', gold: '#c9a227',
+  'rose gold': '#b76e79',                navy: '#1f2a44',   blue: '#2f5fa8',
+  green: '#3f6b4a',   olive: '#6b6b3f',  red: '#a32431',    burgundy: '#5c1f2b',
+  pink: '#e0a3b4',    purple: '#6b4b8a', yellow: '#e0b544', orange: '#d2762e',
+};
+
 export default function Lightbox({ product, onClose, onPrev, onNext, hasPrev, hasNext }) {
   const { addItem, openCheckout } = useCart();
 
@@ -56,6 +70,36 @@ export default function Lightbox({ product, onClose, onPrev, onNext, hasPrev, ha
             <p className="lb-category">{product.category}</p>
             <h2 className="lb-name">{product.name}</h2>
             <p className="lb-price">Ksh {Number(product.price).toLocaleString('en-KE')}</p>
+
+            {/* Colours, shown only when the owner has actually recorded them.
+                A product with no colours set renders nothing here — an empty
+                swatch row would imply "no colours available", which is a
+                different claim from "we haven't listed them yet", and the
+                whole point of this block is that it states something true
+                about the piece.
+
+                Swatch colour comes from a named-colour map, not from the
+                free-text value, so a typo in admin shows a neutral chip
+                instead of silently rendering the wrong colour to a buyer. */}
+            {Array.isArray(product.colours) && product.colours.length > 0 && (
+              <div className="lb-colours">
+                <p className="lb-colours__label">
+                  {product.colours.length} colour{product.colours.length !== 1 ? 's' : ''} available
+                </p>
+                <ul className="lb-colours__list">
+                  {product.colours.map((c) => (
+                    <li key={c} className="lb-colour">
+                      <span
+                        className="lb-colour__dot"
+                        style={{ background: SWATCH[c.trim().toLowerCase()] || 'transparent' }}
+                        aria-hidden="true"
+                      />
+                      {c}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             <div className={`lb-status lb-status--${product.status.toLowerCase().replace(/\s+/g, '-')}`}>
               {product.status}
