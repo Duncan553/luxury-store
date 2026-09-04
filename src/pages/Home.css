@@ -429,7 +429,12 @@
   /* Big and heavy — the display face carried at 600 so it reads as a
      masthead rather than as elegant body copy blown up. */
   font-weight: 600;
-  font-size: clamp(4.2rem, 21vw, 13rem);
+  /* 24vw, not 21vw. On a 390px phone the words came out 290-309px wide
+     against a 272px plate — only about 9px of each word cleared the photo,
+     so "LUXURY" was reduced to two slivers poking out either side. The
+     word has to be visibly wider than the plate for the layering to read
+     as a magazine cover instead of as a broken image. */
+  font-size: clamp(3.4rem, 24vw, 13rem);
   line-height: 0.82;
   /* Tracking goes NEGATIVE as size goes up. Letter-spacing that looks
      normal at 16px reads as gappy and amateur at 120px — display type is
@@ -485,7 +490,10 @@
   position: relative;
   z-index: 2;
   margin: 0;
-  width: 82%;
+  /* Narrower on phones for the same reason: the plate and the type are
+     competing for the same 390px, and the type is what carries the
+     composition. On desktop (below) the plate goes back up to 76%. */
+  width: 62%;
   max-width: 470px;
 }
 .hero__plate img {
