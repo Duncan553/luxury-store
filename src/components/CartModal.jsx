@@ -24,7 +24,6 @@ export default function CartModal() {
   const [view, setView] = useState('cart');
 
   const [waName,  setWaName]  = useState('');
-  const [waPhone, setWaPhone] = useState('');
   const [waError, setWaError] = useState('');
   const [waSent,  setWaSent]  = useState(false);
   const [sending, setSending] = useState(false);
@@ -47,7 +46,7 @@ export default function CartModal() {
     } else {
       setView('cart');
       setWaSent(false); setSending(false);
-      setWaName(''); setWaPhone(''); setWaError('');
+      setWaName(''); setWaError('');
       setWaFallbackUrl(''); setOrderRef('');
     }
   }, [isOpen, checkoutView]);
@@ -60,10 +59,10 @@ export default function CartModal() {
     if (!waName.trim()) { setWaError('Please enter your name.'); return; }
 
     setSending(true);
-    const res = await checkoutViaWhatsApp({
-      name: waName.trim(),
-      phone: waPhone.trim(),
-    });
+    // No phone collected: opening the chat hands the owner the customer's
+    // number automatically, so asking for it here was a redundant field
+    // sitting directly in front of the one action that matters.
+    const res = await checkoutViaWhatsApp({ name: waName.trim() });
     setSending(false);
     setOrderRef(res.orderId || '');
 
@@ -132,18 +131,11 @@ export default function CartModal() {
               </div>
 
               <div className="form-group">
-                <label className="form-label" htmlFor="wa-name">Your Name *</label>
+                {/* No "*" — it only distinguishes required from optional, and
+                    this is now the only field. */}
+                <label className="form-label" htmlFor="wa-name">Your Name</label>
                 <input id="wa-name" type="text" placeholder="e.g. Jane Wanjiku" autoComplete="name"
                   value={waName} onChange={e => setWaName(e.target.value)} required />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label" htmlFor="wa-phone">
-                  Phone <span className="wa-optional">(so we can call you back)</span>
-                </label>
-                <input id="wa-phone" type="tel" placeholder="0712 345 678"
-                  inputMode="numeric" autoComplete="tel"
-                  value={waPhone} onChange={e => setWaPhone(e.target.value)} />
               </div>
 
               <p className="wa-reassure">
