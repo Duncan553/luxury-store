@@ -109,45 +109,6 @@
 .review-card__author { font-size: 12px; color: var(--muted); letter-spacing: 0.08em; }
 
 /* ── Collection spotlights ────────────────────────────────────────── */
-.about-coll {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
-  align-items: center;
-  margin-bottom: 80px;
-}
-.about-coll:last-child { margin-bottom: 0; }
-.about-coll--reverse { direction: rtl; }
-.about-coll--reverse > * { direction: ltr; }
-.about-coll__img-wrap {
-  position: relative;
-  aspect-ratio: 4/5;
-  overflow: hidden;
-}
-.about-coll__img {
-  transition: transform 0.8s var(--ease);
-}
-.about-coll__img-wrap:hover .about-coll__img { transform: scale(1.05); }
-.about-coll__img-tag {
-  position: absolute; bottom: 16px; left: 16px;
-  background: rgba(0,0,0,0.7); backdrop-filter: blur(8px);
-  color: var(--gold); font-size: 9px; font-weight: 600;
-  letter-spacing: 0.16em; text-transform: uppercase;
-  padding: 5px 12px;
-}
-.about-coll__label {
-  font-size: 10px; font-weight: 600; letter-spacing: 0.2em;
-  text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
-  display: block;
-}
-.about-coll__headline {
-  font-family: var(--font-head); font-size: clamp(2rem, 3.5vw, 3rem);
-  font-weight: 300; color: var(--text); line-height: 1.1;
-  margin-bottom: 20px; letter-spacing: -0.02em;
-}
-.about-coll__body {
-  font-size: 15px; color: var(--muted); line-height: 1.85;
-}
 
 /* ── Store details / Find Us ──────────────────────────────────────── */
 .about-settings__tagline {
@@ -216,16 +177,13 @@
   .about-story { grid-template-columns: 1fr; gap: 32px; }
   .about-story__image { max-width: 100%; height: 340px; }
   .about-review-form-wrap { max-width: 100%; }
-  .about-coll { grid-template-columns: 1fr; gap: 28px; margin-bottom: 56px; }
-  .about-coll--reverse { direction: ltr; }
-    .about-settings-grid { grid-template-columns: 1fr 1fr; }
+        .about-settings-grid { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {
   .review-form .star-input__star { font-size: 32px; }
   .about-settings-grid { grid-template-columns: 1fr; }
-  .about-coll__headline { font-size: 1.8rem; }
-}
+  }
 
 /* C2: vacation banner */
 .vacation-banner {
@@ -306,4 +264,188 @@
 @media (max-width: 780px) {
   .about-how  { grid-template-columns: 1fr; gap: 28px; }
   .about-bulk { padding: 32px 24px; }
+}
+
+/* ── Category tiles ───────────────────────────────────────────────────
+   One shape, repeated. Every tile is the same poster ratio with the same
+   crop and the same label position, so the row reads as a set rather than
+   as a pile of differently-sized photos.
+
+   Mobile first: two columns is the base rule, four only from 720px up.
+   Most of this traffic is phones, so the phone layout is the one written
+   without a media query. */
+.cat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.cat-tile {
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+}
+/* aspect-ratio holds the box before the image loads, so the grid doesn't
+   jump around on a slow connection — the phone case that matters here. */
+.cat-tile__img {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  /* Without this the tile breaks its own shape. The tiles are flex columns
+     inside a grid whose rows stretch to the tallest card, so a card with a
+     longer blurb squeezed its OWN image box to make room for the text —
+     aspect-ratio loses to a flex constraint. The Watches tile rendered
+     173px tall against 216px for the rest, which is exactly the
+     "some pictures bigger than others" problem. flex-shrink:0 makes the
+     ratio non-negotiable. */
+  flex-shrink: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+.cat-tile__img img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.7s var(--ease);
+}
+.cat-tile__ph { width: 100%; height: 100%; background: var(--surface); }
+/* Hover only enlarges — no hover-only information, since a phone has no
+   hover state to reveal it with. */
+@media (hover: hover) {
+  .cat-tile:hover .cat-tile__img img { transform: scale(1.04); }
+  .cat-tile:hover .cat-tile__name { color: var(--gold-light); }
+}
+.cat-tile__meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+}
+.cat-tile__name {
+  font-family: var(--font-head);
+  font-size: 1.05rem;
+  font-weight: 400;
+  color: var(--text);
+  transition: color 0.2s;
+}
+.cat-tile__count {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cat-tile__blurb {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  /* No line-clamp here. The -webkit-box version collapsed these to zero
+     height in Chrome (computed display came back as flow-root and the
+     paragraphs vanished), so the blurbs simply didn't render. The card
+     shape is already protected by flex-shrink:0 on the image box, which
+     was the actual fix — clamping was belt-and-braces that broke the
+     belt. Keeping the copy similar in length does the rest. */
+}
+
+@media (min-width: 720px) {
+  .cat-grid { grid-template-columns: repeat(4, 1fr); gap: 22px; }
+  .cat-tile__name { font-size: 1.15rem; }
+  .cat-tile__blurb { font-size: 13.5px; }
+}
+
+/* ── Editorial spread ─────────────────────────────────────────────────
+   MOBILE FIRST. The base rules below are the phone layout — one column,
+   image first — because that's where nearly all of this traffic lands.
+   The magazine grid is the enhancement, not the default. */
+.aed {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 28px;
+}
+.aed__fig { margin: 0; }
+.aed__fig img {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  object-position: top center;
+  display: block;
+  border: 1px solid var(--border);
+}
+/* A caption is an aed device, not decoration: it tells you where the
+   shop actually is, which was previously a floating "✦ Nairobi, Est. 2024"
+   badge that read as a sticker. */
+.aed__cap {
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.aed__eyebrow {
+  font-family: var(--font-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 14px;
+}
+.aed__h {
+  font-family: var(--font-head);
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  font-weight: 300;
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  text-wrap: balance;
+  margin-bottom: 20px;
+}
+/* The lede carries the drop cap and sits a step larger than the body —
+   typographic contrast is what separates an article from a wall of text. */
+.aed__lede,
+.aed__p {
+  font-family: var(--font-read);
+  color: var(--muted);
+  /* ~65 characters: the measure that stops the eye losing its place on the
+     return sweep. Without it these lines ran the full column width. */
+  max-width: 62ch;
+}
+.aed__lede {
+  font-size: 19px;
+  line-height: 1.62;
+  color: #cfc9c4;
+  margin-bottom: 18px;
+}
+.aed__p {
+  font-size: 16.5px;
+  line-height: 1.75;
+  margin-bottom: 14px;
+}
+.aed__lede::first-letter {
+  float: left;
+  font-family: var(--font-head);
+  font-size: 3.4em;
+  line-height: 0.82;
+  padding: 6px 10px 0 0;
+  color: var(--gold-light);
+}
+
+@media (min-width: 860px) {
+  /* The asymmetry: text takes the wider track and leads, the photo is the
+     narrower supporting column — not a 50/50 split where neither wins. */
+  .aed {
+    grid-template-columns: 1.35fr 1fr;
+    gap: 72px;
+    align-items: start;
+  }
+  /* Source order puts the image first (right for mobile); on desktop it
+     moves to column 2 and drops down, so the headline starts the page and
+     the picture enters below its baseline — the offset that makes a spread
+     read as composed rather than stacked. */
+  .aed__fig { grid-column: 2; grid-row: 1; margin-top: 78px; }
+  .aed__col { grid-column: 1; grid-row: 1; }
+  .aed__h { margin-bottom: 26px; }
 }

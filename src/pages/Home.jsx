@@ -104,7 +104,7 @@ export default function Home() {
   // what we sell, where we are, and how ordering works.
   useSeo({
     title: 'Luxury Bags, Jewellery & Watches in Nairobi',
-    description: 'Quality bags, jewellery and watches, delivered across Kenya. Order on WhatsApp — we reply in minutes.',
+    description: 'Bags, jewellery and watches from Nairobi, shipped across Kenya and worldwide. Order on WhatsApp.',
     path: '/',
   });
 
@@ -203,7 +203,7 @@ export default function Home() {
               <motion.h2 className="hero__seo-line"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, ease, delay: 0.6 }}>
-                Designer bags, jewellery &amp; watches in Nairobi — delivered across Kenya
+                Bags, jewellery &amp; watches from Nairobi — shipped across Kenya and worldwide
               </motion.h2>
 
               <motion.div className="hero__ctas"
@@ -281,11 +281,18 @@ export default function Home() {
             <h2 className="editorial__heading">
               Real pieces,<br />sorted fast.
             </h2>
+            {/* Two things were wrong here. "Sold from Nairobi" with no
+                further scope read as Nairobi-only, when Kamili ships
+                worldwide — understating your own reach is still telling the
+                customer something untrue. And "no waiting on a courier you
+                can't reach" was a swipe at couriers Kamili itself depends on
+                to deliver: a promise the shop is not in a position to keep.
+                Nairobi stays because it's where the shop is (and it's what
+                local buyers search for); the scope is now stated plainly. */}
             <p className="editorial__body">
-              Bags, jewelry and watches, sourced and sold from Nairobi.
-              Message us on WhatsApp, we confirm what's available and
-              arrange delivery — no account, no waiting on a courier
-              you can't reach.
+              Bags, jewelry and watches, sold out of Nairobi and shipped
+              worldwide. Message us on WhatsApp and we'll confirm what's in
+              stock and what delivery to your address costs, before you pay.
             </p>
             {/* Both numbers are live, not written-in: productCount comes from
                 an exact DB count (see the fetch above), categories.length
@@ -407,8 +414,8 @@ export default function Home() {
             </motion.div>
 
             <motion.div variants={itemV} className="bento-card bento-card--sm">
-              <h3 className="bento-card__title">Nairobi-Based</h3>
-              <p className="bento-card__desc">Delivery arranged across Kenya from a local WhatsApp number.</p>
+              <h3 className="bento-card__title">Nairobi-Based, Ships Worldwide</h3>
+              <p className="bento-card__desc">Based in Nairobi, shipping across Kenya and internationally. Cost quoted per address.</p>
             </motion.div>
 
             {/* Was "Personal Touch — every order fulfilled personally, with

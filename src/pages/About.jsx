@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useSeo, reviewJsonLd } from '../lib/seo';
@@ -36,34 +37,32 @@ function ReviewCard({ review }) {
   );
 }
 
-/* ── Collection spotlights ─────────────────────────────────────────── */
-// Matches the real categories in the products table (Bags, Jewelry,
-// Watches) — an earlier version had a fourth "Accessories" card
-// (scarves/belts/sunglasses) describing a product line that was never
-// actually in the catalogue. Removed rather than reworded, same as the
-// craftsmanship-narrative copy below: don't describe what isn't real.
-const COLLECTIONS = [
-  {
-    label: 'Watches',
-    headline: 'Time, on your wrist.',
-    body: 'Message us on WhatsApp and we\'ll send photos of the exact watch before you order.',
-    img: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=900&q=80',
-    tag: 'Watches',
-    align: 'right',
-  },
-  {
-    label: 'Jewellery',
-    headline: 'Pieces worth wearing daily.',
-    body: 'Rings, bangles, pendants and earrings. Ask us anything about a piece before you order it.',
-    img: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=900&q=80',
-    tag: 'Jewellery',
-    align: 'left',
-  },
-];
+/* ── Category blurbs ───────────────────────────────────────────────
+   Keyed by slug, with a fallback, because the category list itself comes
+   from the database — the owner can add a category in admin and it has to
+   appear here without a code change. An unknown slug gets the fallback
+   rather than nothing, so a new category never renders a broken card.
+
+   Written as what-it-is plus what-it's-for, not pure atmosphere. The
+   research on this is that benefit-only copy is its own failure mode: it
+   reads as marketing noise and starves the shopper who is trying to
+   compare. So each line names the actual shapes stocked AND the reason
+   you'd reach for one. */
+const BLURBS = {
+  bags:       'Totes, satchels, crossbodies and backpacks — from an everyday work bag to something small for an evening out.',
+  jewelry:    'Chains, rings, bangles and earrings — light enough to wear every day, or the piece people actually notice.',
+  watches:    'Dress watches, chronographs and everyday steel — the one thing people read you by, and the only way to check the time without reaching for your phone.',
+  sunglasses: 'Aviators, wayfarers, cat-eye and round frames. Nairobi sun is not gentle; these handle it without looking like safety gear.',
+};
+const FALLBACK_BLURB = 'Browse what we currently have in this category.';
 
 /* ── Main component ───────────────────────────────────────────────── */
 export default function About() {
   const [reviews,  setReviews]  = useState([]);
+  // Categories drive the grid below, so a category added in admin shows up
+  // here on its own. Counts are fetched alongside for the live piece count.
+  const [categories, setCategories] = useState([]);
+  const [counts,     setCounts]     = useState({});
   const [settings, setSettings] = useState(null);
   // phone is optional — when provided, the DB trigger checks it against successful
   // payments and auto-approves the review if a match is found (verified buyer).
@@ -96,6 +95,27 @@ export default function About() {
       .eq('id', 'singleton')
       .single()
       .then(({ data }) => { if (data) setSettings(data); });
+
+    supabase
+      .from('categories')
+      .select('id, name, slug, cover_url')
+      .order('created_at')
+      .then(({ data }) => { if (data) setCategories(data); });
+
+    // Only the category column comes back — enough to count, small enough
+    // not to matter on a phone connection.
+    supabase
+      .from('products')
+      .select('category')
+      .then(({ data }) => {
+        if (!data) return;
+        const byCat = {};
+        data.forEach((p) => {
+          const slug = (p.category || '').toLowerCase().replace(/\s+/g, '-');
+          byCat[slug] = (byCat[slug] || 0) + 1;
+        });
+        setCounts(byCat);
+      });
   }, []);
 
   async function handleSubmit(e) {
@@ -150,34 +170,51 @@ export default function About() {
         <div className="container">
           <p className="section-eyebrow">Our Story</p>
           <h1 className="about-hero__title">Kamili</h1>
-          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp, delivered across Kenya.</p>
+          <p className="about-hero__sub">Bags, jewellery &amp; watches — ordered on WhatsApp, shipped worldwide.</p>
         </div>
       </div>
 
       {/* ── Origin story ──────────────────────────────────────────────── */}
       <section className="section">
-        <div className="container about-story">
-          <div className="about-story__text reveal">
-            <h2 className="about-story__heading">Bags, jewellery<br />&amp; watches.</h2>
-            <p>
+        {/* Editorial layout, built on how a magazine spread actually works:
+            an ASYMMETRIC grid rather than two equal halves (the 50/50 split
+            gave both the text and the photo the same weight, so neither led);
+            a controlled MEASURE so lines stay near 65 characters instead of
+            running the full column; a DROP CAP to mark the entry point; and
+            white space used as structure rather than as leftover padding.
+
+            The photo is deliberately narrower than the text column and
+            offset downward — in a spread the image supports the copy, it
+            doesn't mirror it. On a phone this all collapses to one column
+            with the image first, because a 390px screen has no room for
+            asymmetry and the picture is the better opening. */}
+        <div className="container aed">
+          <figure className="aed__fig reveal reveal-delay-2">
+            <img
+              src="https://images.unsplash.com/photo-1705909237050-7a7625b47fac?auto=format&fit=crop&w=800&q=80"
+              alt="Structured black leather bag"
+              loading="lazy"
+            />
+            <figcaption className="aed__cap">Nairobi, Kenya — est. 2024</figcaption>
+          </figure>
+
+          <div className="aed__col reveal">
+            <p className="aed__eyebrow">Who we are</p>
+            <h2 className="aed__h">Bags, jewellery<br />&amp; watches.</h2>
+            <p className="aed__lede">
               Kamili is a shop in Nairobi selling bags, jewellery and watches.
               We buy stock in and sell it on — we're not the manufacturer.
             </p>
-            <p style={{ marginTop: 16 }}>
+            <p className="aed__p">
               Orders happen on WhatsApp. Send us what you want and we'll reply
               with the delivery cost for your area before you pay anything. If
               you want more photos of a piece first, just ask.
             </p>
-            <div className="about-origin-tag reveal reveal-delay-1">
-              <span>✦</span> Nairobi, Kenya — Est. 2024
-            </div>
-          </div>
-          <div className="about-story__image reveal reveal-delay-2">
-            <img
-              src="https://images.unsplash.com/photo-1705909237050-7a7625b47fac?auto=format&fit=crop&w=800&q=80"
-              alt="Black leather bag — structured luxury"
-              className="img-cover"
-            />
+            <p className="aed__p">
+              We ship from Nairobi to the rest of Kenya and to customers
+              outside it. Wherever you are, the cost of getting it to you is
+              quoted before you pay — never after.
+            </p>
           </div>
         </div>
       </section>
@@ -231,8 +268,8 @@ export default function About() {
               },
               {
                 n: '03',
-                h: 'Anywhere in Kenya',
-                b: 'Nairobi deliveries are arranged directly. Outside Nairobi we send by courier to your nearest town — you get the tracking details once it\'s on the way.',
+                h: 'Kenya or anywhere else',
+                b: 'Nairobi deliveries are arranged directly. Everywhere else — the rest of Kenya or another country — goes by courier, with tracking details once it ships. Tell us your address and we\'ll quote it.',
               },
             ].map((step) => (
               <div key={step.n} className="about-how__item">
@@ -274,7 +311,7 @@ export default function About() {
               <ul className="about-bulk__list">
                 <li>Mixed orders are fine — bags, watches and jewellery on one invoice.</li>
                 <li>We'll confirm what's in stock and what needs to be sourced, with a realistic date.</li>
-                <li>Countrywide delivery, quoted per order.</li>
+                <li>Delivery anywhere we ship, quoted per order.</li>
               </ul>
               {settings?.whatsapp && (
                 <a
@@ -295,27 +332,47 @@ export default function About() {
 
       <div className="divider container" />
 
-      {/* ── Collection Spotlights ─────────────────────────────────────────── */}
-      <section className="section about-collections">
+      {/* ── Categories ────────────────────────────────────────────────
+          Was two enormous alternating image/text blocks — half-width
+          images at 4:5, so roughly 570x710px each on desktop, covering
+          only 2 of the 4 categories and leaving Bags and Sunglasses out
+          entirely. Nothing about it was arranged: the two images were
+          different subjects at different crops, and the section grew a
+          hole every time a category was added.
+
+          Now: one card per category, every card identical — same poster
+          ratio, same crop, same label position — driven by the categories
+          table, so adding a category in admin adds a card here with no
+          code change.
+
+          Mobile first, because that's where nearly all of this traffic
+          lands: two columns on a phone (Baymard's finding is that a
+          desktop tile grid should reflow to two on mobile, and that a
+          category image has to be recognisable at thumbnail size), four
+          across from tablet up. */}
+      <section className="section about-cats">
         <div className="container">
           <p className="section-eyebrow reveal">What We Carry</p>
-          <h2 className="section-title reveal" style={{ marginBottom: 56 }}>The Edit</h2>
-          {COLLECTIONS.map((col) => (
-            <div key={col.label} className={`about-coll reveal${col.align === 'right' ? ' about-coll--reverse' : ''}`}>
-              <div className="about-coll__img-wrap">
-                <img src={col.img} alt={col.label} className="img-cover about-coll__img" />
-                <div className="about-coll__img-tag">{col.tag}</div>
-              </div>
-              {/* No "01 / 02" marker here either — these are product
-                  categories, not an ordered sequence, so numbering them
-                  encoded nothing. */}
-              <div className="about-coll__text">
-                <h3 className="about-coll__label">{col.label}</h3>
-                <p className="about-coll__headline">{col.headline}</p>
-                <p className="about-coll__body">{col.body}</p>
-              </div>
-            </div>
-          ))}
+          <h2 className="section-title reveal" style={{ marginBottom: 40 }}>Categories</h2>
+          <div className="cat-grid reveal">
+            {categories.map((c) => (
+              <Link key={c.id ?? c.slug} to={`/category/${c.slug}`} className="cat-tile">
+                <div className="cat-tile__img">
+                  {c.cover_url
+                    ? <img src={c.cover_url} alt={c.name} loading="lazy" width="760" height="1013" />
+                    : <div className="cat-tile__ph" aria-hidden="true" />}
+                </div>
+                <div className="cat-tile__meta">
+                  <h3 className="cat-tile__name">{c.name}</h3>
+                  {/* Live count, not a written-in number — it can't go stale. */}
+                  <span className="cat-tile__count">
+                    {counts[c.slug] ?? 0} {counts[c.slug] === 1 ? 'piece' : 'pieces'}
+                  </span>
+                </div>
+                <p className="cat-tile__blurb">{BLURBS[c.slug] || FALLBACK_BLURB}</p>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

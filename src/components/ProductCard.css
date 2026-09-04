@@ -190,5 +190,16 @@
   /* Auto-width already fits "Add to Cart" at any screen size — this just
      upsizes the tap target to a real 44px, the accessibility minimum. */
   .pcard__btn { min-height: 44px; padding: 0 16px; font-size: 10.5px; }
+  /* The 44px rule above only ever covered .pcard__btn. The buttons that sit
+     ON the image — "Add to Cart" and "Quick View" — are .pcard__overlay-btn,
+     and their 11px padding left them 34px and 36px tall on a phone, under
+     the 44px minimum. Measured on a 387px viewport, not assumed. */
+  .pcard__overlay-btn { min-height: 44px; padding: 12px 24px; }
+}
+
+/* Touch devices get the same floor regardless of width — a tablet in
+   portrait is still a finger, not a mouse. */
+@media (hover: none) {
+  .pcard__overlay-btn { min-height: 44px; padding: 12px 24px; }
 }
 

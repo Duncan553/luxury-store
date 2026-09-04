@@ -31,6 +31,13 @@
 
   --font-head: 'Cormorant Garamond', Georgia, serif;
   --font-body: 'Inter', sans-serif;
+  /* Third role: a reading serif for long-form editorial passages.
+     Cormorant is a display face — beautiful large, thin and tiring at
+     paragraph size — and Inter is a UI face with no voice. Newsreader is
+     drawn for screen reading at text sizes and has optical sizing, which
+     is what gives a magazine page its texture. Used ONLY for editorial
+     body copy, never for UI, so the interface stays in Inter. */
+  --font-read: 'Newsreader', Georgia, 'Times New Roman', serif;
 
   --radius:    0px;
   --radius-sm: 2px;
