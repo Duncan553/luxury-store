@@ -208,7 +208,7 @@ export default function Home() {
               <motion.h1 className="hero__word hero__word--back"
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.55 }}>
+                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.12 }}>
                 Quiet
               </motion.h1>
 
@@ -216,11 +216,11 @@ export default function Home() {
               <motion.figure className="hero__plate"
                 initial={{ opacity: 0, y: 34 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.75 }}>
+                transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.18 }}>
                 <img
                   src={heroLg}
                   srcSet={`${heroSm} 520w, ${heroLg} 1000w`}
-                  sizes="(max-width: 767px) 74vw, 34vw"
+                  sizes="(max-width: 767px) 58vw, 330px"
                   alt="A black leather handbag held in both hands, with a gold watch on the wrist"
                   width="1000" height="1500"
                   fetchpriority="high"
@@ -231,7 +231,7 @@ export default function Home() {
               <motion.span className="hero__word hero__word--front" aria-hidden="true"
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.65 }}>
+                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1], delay: 0.22 }}>
                 Luxury
               </motion.span>
             </div>
@@ -240,7 +240,7 @@ export default function Home() {
               <motion.p className="hero__lede"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.9, ease, delay: 1.15 }}>
+                transition={{ duration: 0.55, ease, delay: 0.34 }}>
                 Bags, jewellery and watches, sold out of Nairobi. Ordered on
                 WhatsApp — we confirm what's in stock and what delivery costs
                 before you pay.
@@ -249,7 +249,7 @@ export default function Home() {
               <motion.div className="hero__ctas"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease, delay: 1.35 }}>
+                transition={{ duration: 0.5, ease, delay: 0.44 }}>
                 <MagBtn to={categories[0] ? `/category/${categories[0].slug}` : '/category/bags'}
                   className="btn hero__btn-primary">Shop Now</MagBtn>
                 <MagBtn to="/about" className="btn btn-outline hero__btn-ghost">Our Story</MagBtn>
@@ -259,7 +259,7 @@ export default function Home() {
                   types "Quiet Luxury" into Google. */}
               <motion.h2 className="hero__seo-line"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                transition={{ duration: 0.8, ease, delay: 0.6 }}>
+                transition={{ duration: 0.5, ease, delay: 0.25 }}>
                 Bags, jewellery &amp; watches in Nairobi
               </motion.h2>
             </div>
@@ -375,7 +375,7 @@ export default function Home() {
               <img
                 src={whyLg}
                 srcSet={`${whySm} 450w, ${whyLg} 900w`}
-                sizes="(max-width: 859px) 92vw, 40vw"
+                sizes="(max-width: 859px) 92vw, 500px"
                 alt="A hand wearing bangles holding a striped leather handbag"
                 width="900" height="1125"
                 loading="lazy"

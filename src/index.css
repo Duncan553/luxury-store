@@ -279,6 +279,12 @@ select option { background: var(--surface2); }
   opacity: 1;
   transform: translateY(0);
 }
+/* Applied for a single frame to above-the-fold elements so they paint at
+   final opacity instead of animating in — see useScrollReveal. Without it,
+   adding .visible would still run the 0.5s transition and LCP would still
+   wait for it. */
+.reveal-instant,
+.reveal-instant > * { transition: none !important; }
 .reveal-delay-1 { transition-delay: 0.1s; }
 .reveal-delay-2 { transition-delay: 0.2s; }
 .reveal-delay-3 { transition-delay: 0.3s; }
