@@ -16,15 +16,24 @@
      in daylight. */
   --muted2:      #8d8884;
 
-  /* #8B0000 on --bg (#070707) measured ~2.0:1 — the "Buy Now" / "Add to
-     Cart" label was nearly unreadable in daylight. This crimson keeps the
-     brand hue and measures ~5.9:1 with white text (Fix 3 of the audit). */
-  --gold:        #C81E3C;
-  --gold-light:  #E63757;
-  --gold-dim:    rgba(200,30,60,0.12);
-  --gold-glow:   0 0 40px rgba(200,30,60,0.18);
-  /* Lighter tint of the same hue, for text that sits ON dark backgrounds
-     (section eyebrows) rather than being a background itself. */
+  /* SURFACE red — the fill behind white text (buttons, badges, the price
+     chip). Deepened from #C81E3C to a carmine: the brighter crimson reads
+     as a sale sticker, and the research on colour in this market is that
+     bright red signals discount and mass market while a deep, low-chroma
+     red signals expense. It also measures BETTER where it matters —
+     7.09:1 with white text against the old 5.67:1 — so the fix that made
+     "Buy Now" legible in daylight is strengthened, not undone.
+
+     Deliberately NOT used for small red text: this colour on the near-
+     black ground is 2.84:1, and small text needs 4.5:1. --accent-text
+     exists for that and measures 7.38:1. The old crimson was 3.56:1 as
+     text — already below the floor before this change. */
+  --gold:        #B01030;
+  --gold-light:  #C8203E;
+  --gold-dim:    rgba(176,16,48,0.12);
+  --gold-glow:   0 0 40px rgba(176,16,48,0.18);
+  /* TEXT red — for red type on dark grounds (eyebrows, kickers, links).
+     7.38:1 on --bg, so it clears AA for small text. */
   --accent-text: #FF6B85;
 
   --green:       #25D366;
@@ -206,7 +215,7 @@ select option { background: var(--surface2); }
   font-weight: 500;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--accent-text);
   border: 1px solid rgba(220,20,60,0.4);
   padding: 3px 9px;
 }

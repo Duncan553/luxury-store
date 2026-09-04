@@ -65,7 +65,7 @@
   font-size: 11px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--accent-text);
   border: 1px solid var(--gold);
   padding: 6px 14px;
 }
@@ -97,7 +97,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
 }
-.review-card__stars { color: var(--gold); font-size: 16px; letter-spacing: 2px; margin-bottom: 12px; }
+.review-card__stars { color: var(--accent-text); font-size: 16px; letter-spacing: 2px; margin-bottom: 12px; }
 .review-card__text {
   font-family: var(--font-head);
   font-size: 17px;
@@ -131,13 +131,13 @@
 .about-settings-card--wa:hover { border-color: #25d366; }
 .about-settings-card--ig:hover { border-color: #c13584; }
 .about-settings-card__icon {
-  width: 22px; height: 22px; flex-shrink: 0; color: var(--gold);
+  width: 22px; height: 22px; flex-shrink: 0; color: var(--accent-text);
 }
 .about-settings-card--wa .about-settings-card__icon { color: #25d366; }
 .about-settings-card--ig .about-settings-card__icon { color: #c13584; }
 .about-settings-card__icon--text {
   width: auto; font-size: 18px; line-height: 1;
-  color: var(--gold);
+  color: var(--accent-text);
 }
 .about-settings-card__label {
   display: block; font-size: 9px; font-weight: 600; letter-spacing: 0.16em;
@@ -159,7 +159,7 @@
   line-height: 1; padding: 0;
 }
 .star-input__star.filled,
-.star-input__star:hover { color: var(--gold); }
+.star-input__star:hover { color: var(--accent-text); }
 .star-input__star:hover  { transform: scale(1.15); }
 
 /* ── Success state ────────────────────────────────────────────────── */
@@ -207,7 +207,7 @@
   font-family: var(--font-head);
   font-size: 12px;
   letter-spacing: 0.2em;
-  color: var(--gold);
+  color: var(--accent-text);
   margin-bottom: 12px;
 }
 .about-how__h {
@@ -255,7 +255,7 @@
   content: '✦';
   position: absolute;
   left: 0;
-  color: var(--gold);
+  color: var(--accent-text);
   font-size: 10px;
   top: 3px;
 }
@@ -308,7 +308,7 @@
   font-weight: 600;
   letter-spacing: 0.22em;
   text-transform: uppercase;
-  color: var(--gold);
+  color: var(--accent-text);
   margin-bottom: 14px;
 }
 .aed__h {
@@ -371,3 +371,31 @@
 /* No CSS greyscale here: this image is already graded mono in the file.
    Filtering it again would push the contrast a second time and it would
    stop matching the hero plate and the category covers. */
+
+/* ── Full-width plate ─────────────────────────────────────────────────
+   Landscape, breaking the text column. A magazine uses a wide plate to
+   reset the eye between sections; without one the About page was an
+   unbroken run of paragraphs. */
+.about-plate { margin: 0; }
+.about-plate img {
+  display: block;
+  width: 100%;
+  /* height:auto because the width/height attributes apply as CSS
+     presentational hints and would otherwise win over aspect-ratio. */
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+.about-plate__cap {
+  margin-top: 12px;
+  font-family: var(--font-body);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted2);
+  text-align: right;
+}
+@media (min-width: 900px) {
+  .about-plate img { aspect-ratio: 21 / 9; }
+}

@@ -91,7 +91,7 @@
   transform-origin: left; margin-bottom: 28px;
 }
 .hero__eyebrow {
-  font-size: 10px; font-weight: 400; color: var(--gold);
+  font-size: 10px; font-weight: 400; color: var(--accent-text);
   letter-spacing: 0.3em; text-transform: uppercase; display: block; margin-bottom: 24px;
 }
 
@@ -176,7 +176,7 @@
 }
 .cat-card__eyebrow {
   font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase;
-  color: var(--gold); display: block; margin-bottom: 6px;
+  color: var(--accent-text); display: block; margin-bottom: 6px;
   opacity: 0; transform: translateY(8px);
   transition: opacity 0.35s, transform 0.35s var(--ease);
 }
@@ -569,4 +569,61 @@
 .editorial__img,
 .bento-card__img {
   filter: grayscale(1) contrast(1.06);
+}
+
+/* ── Magazine treatment for the lower sections ───────────────────────
+   Same rules the hero and the About spread already follow, applied to the
+   two sections that were still set like a generic marketing page: a big
+   display title, body copy in the reading serif held to a real measure,
+   and a caption instead of a sticker. */
+
+/* A plate gets a caption, not a badge. */
+.editorial__cap {
+  display: block;
+  margin-top: 10px;
+  font-family: var(--font-body);
+  font-size: 10.5px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+.editorial__img-wrap { margin: 0; }
+
+/* Bento section header: display scale, not a centred marketing lockup. */
+.bento-section .section-eyebrow {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--accent-text);
+  margin-bottom: 14px;
+}
+.bento-section .section-title {
+  font-family: var(--font-head);
+  /* Big. This is the second title on the page and it was set at roughly
+     body scale, which is what made the section read as a footer rather
+     than as a spread. */
+  font-size: clamp(2.4rem, 6vw, 4.6rem);
+  font-weight: 300;
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+/* Card copy in the reading serif, held to a measure. */
+.bento-card__title {
+  font-family: var(--font-head);
+  font-size: clamp(1.1rem, 1.7vw, 1.4rem);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  margin-bottom: 8px;
+}
+.bento-card__desc {
+  font-family: var(--font-read);
+  font-size: 14.5px;
+  line-height: 1.65;
+  max-width: 42ch;
+  color: var(--muted);
 }

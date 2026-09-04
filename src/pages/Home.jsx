@@ -360,12 +360,26 @@ export default function Home() {
           </Reveal>
 
           <Reveal className="editorial__visual" delay={0.3}>
-            <div className="editorial__img-wrap">
-              <img src={FALLBACK_IMGS.jewelry} alt="Editorial" className="img-cover editorial__img" />
-              <div className="editorial__img-badge">
-                <span>New</span><br />Season
-              </div>
-            </div>
+            <figure className="editorial__img-wrap">
+              {/* Was a stock colour jewellery shot with alt="Editorial" — a
+                  filler image labelled with the name of the section it sat
+                  in. Replaced with a mono plate from the same grade as the
+                  hero: real hands holding a real bag, no face. */}
+              <img
+                src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg"
+                srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-450.jpg 450w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/why-kamili-900.jpg 900w"
+                sizes="(max-width: 859px) 92vw, 40vw"
+                alt="Two hands holding a structured leather tote"
+                width="900" height="1125"
+                loading="lazy"
+                className="img-cover editorial__img"
+              />
+              {/* Removed a "New / Season" sticker that sat on this photo.
+                  It's a fashion-retail badge asserting something the site
+                  can't back — there is no season, and the photo isn't new
+                  stock. A magazine captions a plate; it doesn't sticker it. */}
+              <figcaption className="editorial__cap">Nairobi · sold on WhatsApp</figcaption>
+            </figure>
           </Reveal>
         </div>
       </section>
@@ -394,8 +408,9 @@ export default function Home() {
           <Stagger className="bento-grid">
             {/* Big card */}
             <motion.div variants={itemV} className="bento-card bento-card--big">
+              {/* Same treatment: a mono plate, hands and a watch, no face. */}
               <div className="bento-card__img"
-                style={{ backgroundImage: `url(${FALLBACK_IMGS.bags})` }} />
+                style={{ backgroundImage: `url(https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/good-to-know-900.jpg)` }} />
               <div className="bento-card__overlay" />
               {/* No decorative glyph/number markers on these four cards.
                   They previously alternated ✦ / "01" / ◎ / "02" — numbering

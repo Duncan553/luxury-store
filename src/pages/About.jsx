@@ -240,6 +240,31 @@ export default function About() {
           content — designers Kamili actually stocks, sourced from the
           catalogue — never with another invented paragraph. */}
 
+      {/* A second plate, landscape, breaking the column — a magazine drops a
+          full-width image between sections to reset the eye rather than
+          running text unbroken down the page.
+
+          It's a different crop of the same shoot as the hero, so it reads
+          as the next plate in one story instead of a new stock photo: bag,
+          watch and hands in one frame, black and white, and no face. */}
+      <section className="section-sm">
+        <div className="container">
+          <figure className="about-plate reveal">
+            <img
+              src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg"
+              srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-520.jpg 520w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/editorial/bag-watch-1040.jpg 1040w"
+              sizes="(max-width: 900px) 94vw, 1040px"
+              alt="A hand resting on a black leather handbag, wearing a steel watch"
+              width="1040" height="780"
+              loading="lazy"
+            />
+            <figcaption className="about-plate__cap">
+              Bags, watches and jewellery — one order, one conversation.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
       <div className="divider container" />
 
       {/* ── How ordering actually works ─────────────────────────────────

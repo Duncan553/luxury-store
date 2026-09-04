@@ -20,7 +20,7 @@
   font-size: 20px;
   font-weight: 600;
   letter-spacing: 0.18em;
-  color: var(--gold);
+  color: var(--accent-text);
   display: block;
   margin-bottom: 10px;
 }
