@@ -278,13 +278,20 @@
 .aed__fig { margin: 0; }
 .aed__fig img {
   width: 100%;
+  /* THIRD time this has bitten in this project. The <img> carries
+     width/height attributes (they reserve space so the page doesn't jump
+     on a slow connection), and those attributes apply as CSS
+     PRESENTATIONAL HINTS. A rule that sets width but not height lets the
+     attribute's height win, and aspect-ratio never gets to compute — the
+     figure rendered 490x1000 instead of 490x612. */
+  height: auto;
   aspect-ratio: 4 / 5;
   object-fit: cover;
   object-position: top center;
   display: block;
   border: 1px solid var(--border);
 }
-/* A caption is an aed device, not decoration: it tells you where the
+/* A caption is an editorial device, not decoration: it tells you where the
    shop actually is, which was previously a floating "✦ Nairobi, Est. 2024"
    badge that read as a sticker. */
 .aed__cap {
@@ -360,3 +367,7 @@
   .aed__col { grid-column: 1; grid-row: 1; }
   .aed__h { margin-bottom: 26px; }
 }
+
+/* No CSS greyscale here: this image is already graded mono in the file.
+   Filtering it again would push the contrast a second time and it would
+   stop matching the hero plate and the category covers. */

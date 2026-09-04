@@ -3,10 +3,7 @@ import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import CategoryDeck from '../components/CategoryDeck';
 import { motion, useScroll, useTransform, useInView } from 'framer-motion';
-import Tilt from 'react-parallax-tilt';
 import { supabase } from '../lib/supabase';
-import ProductCard from '../components/ProductCard';
-import Lightbox from '../components/Lightbox';
 import { useSeo } from '../lib/seo';
 import './Home.css';
 
@@ -91,9 +88,7 @@ const CAT_BLURBS = {
 
 export default function Home() {
   const [categories,       setCategories]       = useState([]);
-  const [preorders,        setPreorders]        = useState([]);
   const [loading,          setLoading]          = useState(true);
-  const [lbIndex,          setLbIndex]          = useState(null);
   // Real, live count of what's actually in stock right now — shown in the
   // stats strip below instead of a hard-coded number. See the fetch below:
   // { count: 'exact', head: true } asks Postgres for a row count without
@@ -105,13 +100,6 @@ export default function Home() {
   // C2: vacation mode — fetched via CartContext (already fetches store_settings on mount)
   const { vacationMode, vacationMessage } = useCart();
 
-  const openLightbox  = useCallback((product) => {
-    const idx = preorders.findIndex(p => p.id === product.id);
-    setLbIndex(idx >= 0 ? idx : 0);
-  }, [preorders]);
-  const closeLightbox = useCallback(() => setLbIndex(null), []);
-  const prevProduct   = useCallback(() => setLbIndex(i => Math.max(0, i - 1)), []);
-  const nextProduct   = useCallback(() => setLbIndex(i => Math.min(preorders.length - 1, i + 1)), [preorders.length]);
 
   // Homepage head. Written for a person scanning a Google result, not a crawler:
   // what we sell, where we are, and how ordering works.
@@ -129,15 +117,7 @@ export default function Home() {
   useEffect(() => {
     supabase.from('categories').select('*').order('created_at')
       .then(({ data }) => { if (data) setCategories(data); });
-    // New arrivals: products added in the last 30 days, max 5
-    const since = new Date();
-    since.setDate(since.getDate() - 30);
-    supabase.from('products').select('*')
-      .neq('status', 'Out of Stock')
-      .gte('created_at', since.toISOString())
-      .order('created_at', { ascending: false })
-      .limit(5)
-      .then(({ data }) => { if (data) setPreorders(data); setLoading(false); });
+    setLoading(false);
     // Live stock count for the stats strip — was previously a hard-coded
     // "500+" nobody could verify against the real catalogue.
     supabase.from('products').select('id', { count: 'exact', head: true })
@@ -184,68 +164,103 @@ export default function Home() {
         </div>
 
         <motion.div className="hero__content container" style={{ y: heroY, opacity: heroOp }}>
+          {/* Magazine masthead composition. The headline spans the FULL width
+              as row 1, then the copy and the contents column sit in a band
+              beneath it as row 2.
+
+              Why not the obvious two columns: "Quiet / Luxury." is only
+              ~390px of type. Boxed into a half-width column beside the
+              index it left roughly 600px of dead space in the middle of the
+              page, and no font size closes that — the words are short. Run
+              across the whole width the type becomes the image, which is
+              what a cover actually does, and the space is used instead of
+              being decorated. */}
+          {/* MAGAZINE COVER COMPOSITION.
+
+              The photograph is a layer in the middle of the type, not a
+              panel beside it. "LUXURY" is set huge and passes BEHIND the
+              image, so the photo eats the middle of the word — which is the
+              move that makes a cover read as a cover rather than as a
+              headline with a picture next to it.
+
+              It works because the type and the image are in the same grid
+              cell, stacked on the z-axis: word underneath, photo above it,
+              second word above the photo. No cut-outs, no masks — the
+              occlusion is just stacking order, which means it survives any
+              screen width and costs nothing to render.
+
+              The photo is black and white on purpose: a colour photograph
+              here would compete with the type for attention, and mono lets
+              the one red accent in the palette stay the only colour on the
+              page. */}
           <div className="hero__grid">
-            <div className="hero__text">
-              <motion.div className="hero__accent-line"
-                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
-                transition={{ duration: 1.4, ease: [0.76, 0, 0.24, 1], delay: 0.3 }} />
+            <motion.span className="hero__kicker"
+              initial={{ opacity: 0, letterSpacing: '0.6em' }}
+              animate={{ opacity: 1, letterSpacing: '0.3em' }}
+              transition={{ duration: 1.1, ease, delay: 0.4 }}>
+              Nairobi · Est. 2024
+            </motion.span>
 
-              <motion.span className="hero__eyebrow"
-                initial={{ opacity: 0, letterSpacing: '0.6em' }}
-                animate={{ opacity: 1, letterSpacing: '0.3em' }}
-                transition={{ duration: 1.1, ease, delay: 0.5 }}>
-                Nairobi · Est. 2024
-              </motion.span>
-
-              <div className="hero__heading-wrap">
-                <motion.h1 className="hero__heading"
-                  initial={{ opacity: 0, y: 60, skewY: 3 }}
-                  animate={{ opacity: 1, y: 0, skewY: 0 }}
-                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.7 }}>
-                  Quiet<br /><em>Luxury.</em>
-                </motion.h1>
-                {/* Second line is part of the same visual headline, so it must not
-                    be a second <h1> — styling comes from the class, not the tag. */}
-                <motion.div className="hero__heading hero__heading--outline"
-                  initial={{ opacity: 0, y: 60, skewY: 3 }}
-                  animate={{ opacity: 1, y: 0, skewY: 0 }}
-                  transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.85 }}>
-                  Undeniable<br />Presence.
-                </motion.div>
-              </div>
-
-              <motion.p className="hero__sub"
-                initial={{ opacity: 0, y: 24 }}
+            <div className="hero__stack">
+              {/* Layer 1 — behind the photo. */}
+              <motion.h1 className="hero__word hero__word--back"
+                initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.9, ease, delay: 1.2 }}>
-                Quality bags, jewelry &amp; watches<br />for those who need no introduction.
+                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.55 }}>
+                Quiet
+              </motion.h1>
+
+              {/* Layer 2 — the plate. */}
+              <motion.figure className="hero__plate"
+                initial={{ opacity: 0, y: 34 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1], delay: 0.75 }}>
+                <img
+                  src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-1000.jpg"
+                  srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-520.jpg 520w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/kamili-hero-1000.jpg 1000w"
+                  sizes="(max-width: 767px) 74vw, 34vw"
+                  alt="A black leather handbag held in both hands, with a gold watch on the wrist"
+                  width="1000" height="1500"
+                  fetchpriority="high"
+                />
+              </motion.figure>
+
+              {/* Layer 3 — over the photo, so the word is cut in two. */}
+              <motion.span className="hero__word hero__word--front" aria-hidden="true"
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1], delay: 0.65 }}>
+                Luxury
+              </motion.span>
+            </div>
+
+            <div className="hero__band">
+              <motion.p className="hero__lede"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.9, ease, delay: 1.15 }}>
+                Bags, jewellery and watches, sold out of Nairobi and shipped
+                worldwide. Ordered on WhatsApp — we confirm what's in stock and
+                what delivery costs before you pay.
               </motion.p>
 
-              {/* The hero art sells the feeling; this line sells the search term.
-                  "Quiet Luxury" is not something anyone types into Google. */}
+              <motion.div className="hero__ctas"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease, delay: 1.35 }}>
+                <MagBtn to={categories[0] ? `/category/${categories[0].slug}` : '/category/bags'}
+                  className="btn hero__btn-primary">Shop Now</MagBtn>
+                <MagBtn to="/about" className="btn btn-outline hero__btn-ghost">Our Story</MagBtn>
+              </motion.div>
+
+              {/* Carries the search terms the display type can't: nobody
+                  types "Quiet Luxury" into Google. */}
               <motion.h2 className="hero__seo-line"
                 initial={{ opacity: 0 }} animate={{ opacity: 1 }}
                 transition={{ duration: 0.8, ease, delay: 0.6 }}>
                 Bags, jewellery &amp; watches from Nairobi — shipped across Kenya and worldwide
               </motion.h2>
-
-              <motion.div className="hero__ctas"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease, delay: 1.45 }}>
-                <MagBtn to={categories[0] ? `/category/${categories[0].slug}` : '/category/bags'}
-                  className="btn hero__btn-primary">Shop Now</MagBtn>
-                <MagBtn to="/about" className="btn btn-outline hero__btn-ghost">Our Story</MagBtn>
-              </motion.div>
             </div>
-
-            {/* The showcase panel that sat here is gone — an auto-cycling
-                product tile on a red gradient with its own Bags/Jewelry/
-                Watches tabs and a "Shop Bags" link. It duplicated what the
-                category deck further down the page already does properly,
-                competed with the headline for the opening moment, and
-                squeezed the hero type into half the width for a panel that
-                was hidden on phones anyway. */}
           </div>
         </motion.div>
 
@@ -355,46 +370,13 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ═══ PRODUCTS ═══════════════════════════════════════════════════ */}
-      <section className="section">
-        <div className="container">
-          <Reveal className="section-header">
-            <div>
-              <span className="section-eyebrow">Exclusive Access</span>
-              <h2 className="section-title">New Arrivals</h2>
-            </div>
-            {categories[0] && (
-              <MagBtn to={`/category/${categories[0].slug}`} className="btn btn-outline">View All</MagBtn>
-            )}
-          </Reveal>
-
-          {loading ? (
-            <div className="products-grid">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="skeleton-card">
-                  <div className="skeleton-img" /><div className="skeleton-text" />
-                  <div className="skeleton-text skeleton-text--short" />
-                </div>
-              ))}
-            </div>
-          ) : preorders.length > 0 ? (
-            <Stagger className="products-grid">
-              {preorders.map(p => (
-                <motion.div key={p.id} variants={itemV}>
-                  <Tilt tiltMaxAngleDegrees={7} scale={1.02}
-                    transitionSpeed={500} glareEnable
-                    glareMaxOpacity={0.08} glareColor="rgba(220,20,60,0.5)"
-                    tiltEasing="cubic-bezier(0.25,0.46,0.45,0.94)">
-                    <ProductCard product={p} onOpen={openLightbox} />
-                  </Tilt>
-                </motion.div>
-              ))}
-            </Stagger>
-          ) : (
-            <p className="empty-state">No new arrivals this month. Check back soon.</p>
-          )}
-        </div>
-      </section>
+      {/* New Arrivals removed. It put a grid of colour product tiles in the
+          middle of a black-and-white editorial page, which broke the look
+          the rest of the page is now built on — and it duplicated the
+          category deck directly above it as a route into the same items.
+          Latest-first ordering lives where it belongs instead: each
+          category page sorts by created_at descending, so the newest piece
+          in a category is the first one you see. */}
 
       {/* ═══ BENTO PROMISE ══════════════════════════════════════════════ */}
       <section className="bento-section section">
@@ -459,14 +441,6 @@ export default function Home() {
         </div>
       </section>
 
-      <Lightbox
-        product={lbIndex !== null ? preorders[lbIndex] : null}
-        onClose={closeLightbox}
-        onPrev={prevProduct}
-        onNext={nextProduct}
-        hasPrev={lbIndex > 0}
-        hasNext={lbIndex !== null && lbIndex < preorders.length - 1}
-      />
     </div>
   );
 }

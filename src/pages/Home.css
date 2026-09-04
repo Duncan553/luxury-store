@@ -6,6 +6,14 @@
 .hero {
   position: relative; height: 100svh; min-height: 680px;
   display: flex; align-items: center; overflow: hidden;
+  /* The navbar is fixed and floats OVER the hero, but centring knew
+     nothing about it — so as the display type grew, the top word slid
+     under the logo and the nav links. Padding the top of the hero takes
+     the navbar out of the centring calculation (box-sizing is border-box,
+     so the hero keeps its height and the content box shifts down by half
+     the padding). The composition is bottom-light anyway; this uses space
+     that was already empty. */
+  padding-top: clamp(72px, 13vh, 118px);
 }
 
 .hero__bg {
@@ -67,16 +75,15 @@
 }
 
 /* Two-column layout: copy left, animated showcase right. */
-/* Single column since the showcase panel was removed. The hero type was
-   previously boxed into 640px to leave room for that panel; with the panel
-   gone it can run to a proper display measure instead of wrapping early
-   against empty space. */
-.hero__grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: center;
-}
-.hero__text { max-width: 52ch; }
+/* MOBILE FIRST: one column, index below the buttons. The magazine
+   two-column composition is the enhancement, added at 1024px where there
+   is actually room for a margin column. */
+
+@media (min-width: 1024px) {
+  /* Asymmetric on purpose. The index is a MARGIN column — narrow, fixed,
+     subordinate — not a second half competing with the headline. An equal
+     split is what made the old panel fight the type for attention. */
+  }
 
 .hero__accent-line {
   width: 56px; height: 1px;
@@ -89,35 +96,7 @@
 }
 
 /* Split heading — solid + outline */
-.hero__heading-wrap { margin-bottom: clamp(12px, 2.6vh, 28px); }
-.hero__heading {
-  font-family: var(--font-head);
-  /* Sized against the SMALLER of width and height, not width alone.
-     With 9vw the four display lines plus sub, SEO line and buttons came to
-     more than a short window could show: "Shop Now" measured at 688px in a
-     642px viewport — the primary CTA sat below the fold, and since the hero
-     fades out on scroll it faded before you could ever reach it. vmin ties
-     the type to whichever axis is actually scarce, so a laptop with a short
-     window gets smaller type instead of a hidden button. */
-  font-size: clamp(2.8rem, 7.2vmin + 1.2vw, 8.5rem);
-  font-weight: 300; line-height: 0.92;
-  color: var(--text); letter-spacing: -0.03em;
-  will-change: transform;
-}
-.hero__heading em { font-style: italic; color: var(--gold); font-weight: 400; }
-.hero__heading--outline {
-  -webkit-text-stroke: 1px rgba(240,235,225,0.25);
-  color: transparent;
-}
-.hero__heading--outline:hover { color: var(--text); -webkit-text-stroke: 0; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
 
-.hero__sub {
-  font-size: clamp(0.88rem, 1.3vw, 1rem); color: var(--muted);
-  max-width: 380px; line-height: 1.75; font-weight: 300;
-  /* Was a flat 48px. Scales now so the gap gives up room before the button
-     does. */
-  margin-bottom: clamp(18px, 3.5vh, 48px);
-}
 .hero__ctas { display: flex; gap: 16px; flex-wrap: wrap; }
 .hero__btn-primary { background: var(--gold); color: var(--bg); }
 .hero__btn-primary:hover { background: var(--gold-light); }
@@ -362,15 +341,13 @@
   .cat-grid { grid-template-columns: 1fr; grid-template-rows: auto; }
   .cat-card--featured { grid-row: span 1; }
   .cat-card__inner { height: auto; aspect-ratio: 4/3; }
-    .hero__heading--outline { display: none; }
-  .bento-grid { grid-template-columns: 1fr; }
+      .bento-grid { grid-template-columns: 1fr; }
   .bento-card--big { grid-column: span 1; }
   .section-header { flex-direction: column; align-items: flex-start; }
 }
 
 @media (max-width: 480px) {
-  .hero__heading { font-size: clamp(3rem, 14vw, 5rem); }
-  .editorial__stats { gap: 20px; }
+    .editorial__stats { gap: 20px; }
 }
 
 /* C2: vacation banner */
@@ -403,7 +380,193 @@
    that is what gives way — the copy that sells and the buttons that
    convert both stay above the fold. */
 @media (max-height: 700px) {
-  .hero__heading--outline { display: none; }
-  .hero__sub { margin-bottom: 16px; }
-  .hero__heading-wrap { margin-bottom: 10px; }
+        /* Two of the four display lines just went away, which frees vertical
+     room — so the remaining two get BIGGER, not smaller. Without this the
+     headline stayed at its short-window size and left a hole in the middle
+     of the composition between the copy and the contents column. Measured
+     against the fold afterwards, not eyeballed. */
+  }
+
+/* ══ MAGAZINE HERO ═══════════════════════════════════════════════════
+   MOBILE FIRST. Everything below is the phone layout; the two overrides
+   at the end widen it for laptops. */
+.hero__grid { display: block; width: 100%; }
+
+.hero__kicker {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+/* The stack. All three layers share this box; z-index does the rest. */
+.hero__stack {
+  position: relative;
+  /* The plate alone sets this box's height; the words are positioned out
+     of flow over it. */
+  display: flex;
+  justify-content: center;
+  margin-bottom: 22px;
+  isolation: isolate;   /* keeps these z-indexes out of the page's stack */
+}
+
+.hero__word {
+  /* ABSOLUTE, not a transform.
+     The first version positioned these with CSS `transform`, which never
+     applied: these are framer-motion elements, and framer writes
+     transform as an INLINE style to animate y — inline always beats a
+     stylesheet, so the CSS offset was silently discarded and both words
+     sat centred on the plate with their middles covered.
+     Absolute offsets use top/bottom, which framer does not touch. */
+  position: absolute;
+  left: 50%;
+  translate: -50% 0;
+  font-family: var(--font-head);
+  /* Big and heavy — the display face carried at 600 so it reads as a
+     masthead rather than as elegant body copy blown up. */
+  font-weight: 600;
+  font-size: clamp(4.2rem, 21vw, 13rem);
+  line-height: 0.82;
+  /* Tracking goes NEGATIVE as size goes up. Letter-spacing that looks
+     normal at 16px reads as gappy and amateur at 120px — display type is
+     set tight, and this is the single detail that most separates a
+     masthead from a headline that was simply enlarged. */
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  margin: 0;
+  pointer-events: none;   /* type must never block the photo or a button */
+}
+/* Behind the plate, and set open (outlined) so the photo reads as sitting
+   in front of it rather than pasted on top. */
+.hero__word--back {
+  z-index: 1;
+  /* Sits ABOVE the photo with only its base dipping behind it. Once the
+     plate was enlarged, a percentage offset put this word entirely inside
+     the photo's box and it vanished — so it's anchored to the plate's top
+     edge instead, and the overlap is a fixed fraction of the word's own
+     size. That holds at every plate size rather than depending on one. */
+  bottom: 100%;
+  margin-bottom: -0.14em;
+  /* The two lines are set to ONE optical width — the shorter word is
+     tracked out until its edges align with the longer one, which is how a
+     masthead is locked to its measure. QUIET has five characters against
+     LUXURY's six, so without this the block reads as two unrelated lines
+     of different lengths rather than as one masthead. The last letter's
+     trailing space is pulled back so the right edge lines up too. */
+  letter-spacing: 0.135em;
+  padding-left: 0.135em;   /* re-centres it: tracking pushes right only */
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(240, 235, 225, 0.32);
+  /* Lifted so the word sits ABOVE the plate with only its base tucked
+     behind it. Two earlier values were wrong for the same reason: the
+     plate fills the whole grid row, so anything centred in that row has
+     its MIDDLE covered — at -6% and -52% the word read "Q     T" with the
+     middle letters eaten. Hiding the base of a word still leaves it
+     readable; hiding its middle does not. */
+  transform: translateY(-78%);
+}
+/* Over the plate, solid, so this is the word the photo interrupts. */
+.hero__word--front {
+  z-index: 3;
+  /* Sits over the bottom of the photo and hangs below it. */
+  top: 74%;
+  color: var(--text);
+  /* A hairline of the page colour around the glyphs keeps them legible
+     where they cross from the photo onto the dark ground. */
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.55);
+}
+
+.hero__plate {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  width: 82%;
+  max-width: 470px;
+}
+.hero__plate img {
+  display: block;
+  width: 100%;
+  /* height:auto is required: the width/height attributes on the <img> apply
+     as CSS presentational hints, and without this the attribute height wins
+     and the plate renders at its intrinsic 1500px. Cost me the category
+     deck's layout earlier in this project. */
+  height: auto;
+  aspect-ratio: 2 / 3;
+  object-fit: cover;
+  filter: contrast(1.04);
+}
+
+.hero__band { display: grid; gap: 18px; }
+.hero__lede {
+  font-family: var(--font-read);
+  font-size: 15.5px;
+  line-height: 1.7;
+  color: var(--muted);
+  max-width: 46ch;
+  margin: 0;
+}
+.hero__ctas { display: flex; gap: 12px; flex-wrap: wrap; }
+
+@media (min-width: 768px) {
+  /* Laptop: the band sits BESIDE the stack, so the composition fills the
+     width instead of leaving the void the old two-column hero had. */
+  .hero__grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    align-items: center;
+    column-gap: 56px;
+    row-gap: 0;
+  }
+  .hero__kicker { grid-column: 1 / -1; margin-bottom: 4px; }
+  .hero__stack  { grid-column: 1; margin-bottom: 0; }
+  .hero__band   { grid-column: 2; gap: 22px; }
+  /* Type stays wider than the plate on purpose: the word has to break out
+     past both edges of the photo, otherwise the photo covers its middle
+     and it stops being readable. */
+  .hero__word   { font-size: clamp(4.8rem, 13.5vw, 13rem); }
+  .hero__plate  { width: 76%; max-width: 440px; }
+  .hero__lede   { font-size: 16.5px; }
+}
+
+/* Short windows: the plate gives up height, never the buttons. The hero
+   clips its overflow, so the whole column — overhanging word, plate,
+   overhanging word — has to fit inside it. */
+/* Short windows. The column is now word + plate + overhanging word, and
+   the hero clips its overflow, so the plate is what shrinks. */
+/* These ceilings are measured, not guessed. The stack is centred in the
+   hero, so every pixel the plate grows pushes the top word up by half
+   that — and the top word must clear the fixed navbar. On a 642px-tall
+   window that leaves about 26px of headroom, hence these numbers. */
+/* Trading a little type for a lot of picture. The stack is centred in the
+   hero, so the plate can only grow if the word above it gives back half
+   that height — the top word has to keep clearing the navbar. Easing the
+   type down a step buys the photo ~45px of width at this size, which is
+   the difference between a thumbnail and a plate. */
+@media (max-height: 820px) {
+  .hero__plate { max-width: 350px; }
+  .hero__word  { font-size: clamp(3rem, 8.5vw, 7.6rem); }
+}
+@media (max-height: 680px) {
+  .hero__plate { max-width: 290px; }
+  .hero__word  { font-size: clamp(2.6rem, 8vw, 6.5rem); }
+}
+
+/* ── One mono grade across the landing page ──────────────────────────
+   The category covers and the hero plate are converted to black and white
+   in the FILE, so they arrive already graded. These remaining images are
+   editorial furniture rather than assets we control, so they're graded in
+   CSS to match — same look, no second copy of each file to ship.
+
+   Product photographs are deliberately NOT in here. A customer deciding
+   between a tan bag and a black one has to be able to see which is which,
+   and greyscaling the goods hides the single most important thing about
+   them. The editorial frame is mono; the merchandise is not. */
+.editorial__img,
+.bento-card__img {
+  filter: grayscale(1) contrast(1.06);
 }

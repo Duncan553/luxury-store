@@ -31,6 +31,12 @@ import { useReducedMotion } from 'framer-motion';
 import './CategoryDeck.css';
 
 const AUTO_MS = 4000;
+// Travel, in px, before a press counts as a drag rather than a tap. Fingers
+// and mice both drift a few px; below this it stays a click.
+const DRAG_START = 10;
+// How long the deck waits after the visitor stops interacting before it
+// starts moving again.
+const RESUME_MS = 9000;
 
 // Build a srcset from the stored cover URL. The uploader writes
 // <slug>-cover.jpg alongside <slug>-cover-380.jpg and -760.jpg, so the
@@ -51,6 +57,7 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
   const navigate = useNavigate();
   // Drag state lives in refs, not state: it changes every frame and must
   // never trigger a React render.
+  const pressed  = useRef(false);
   const dragging = useRef(false);
   const startX   = useRef(0);
   const dx       = useRef(0);
@@ -67,13 +74,33 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
     setActive(((i % n) + n) % n);
   }, [n]);
 
+  // Taking over pauses autoplay rather than ending it: the deck hands
+  // control back after RESUME_MS of no input, so it never ends up parked on
+  // one category because someone swiped once.
   const take = useCallback((i) => { setUserTook(true); go(i); }, [go]);
 
   useEffect(() => {
-    if (reduce || userTook || n < 2) return;
+    if (!userTook) return;
+    const t = setTimeout(() => setUserTook(false), RESUME_MS);
+    return () => clearTimeout(t);
+  }, [userTook, active]);
+
+  // Advances on its own, always. It used to stop dead under
+  // prefers-reduced-motion, which meant that on any machine with that
+  // setting enabled — and it's on by default in more places than you'd
+  // think — the deck never moved and looked broken until you clicked
+  // something.
+  //
+  // The setting is still respected, just correctly: what reduced-motion
+  // asks you to drop is large positional movement, not change itself. So
+  // the deck still cycles, and the CSS swaps the sliding transition for a
+  // cross-fade (see .deck--fade). Nobody has to touch a control to see
+  // every category.
+  useEffect(() => {
+    if (userTook || n < 2) return;
     const t = setInterval(() => setActive((a) => (a + 1) % n), AUTO_MS);
     return () => clearInterval(t);
-  }, [reduce, userTook, n]);
+  }, [userTook, n]);
 
   if (!n) return null;
 
@@ -99,24 +126,50 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
   //
   // Pointer events cover touch and mouse in one path, so the laptop gets
   // drag-to-browse too rather than arrows only.
+  // A press is NOT yet a drag.
+  //
+  // The first version set dragging=true and called setPointerCapture right
+  // here on pointerdown, and that broke clicking entirely: while a pointer
+  // is captured, the click event is dispatched to the CAPTURING element
+  // instead of the element under the cursor, so the <a> never received it
+  // and tapping a category did nothing at all. (An automated el.click()
+  // still passed, because that dispatches a click directly and never fires
+  // pointer events — which is exactly why it has to be tested with a real
+  // click.)
+  //
+  // So: record the press, claim nothing. The drag only begins once the
+  // pointer has actually travelled DRAG_START px, and capture happens then
+  // — at which point swallowing the click is the correct thing to do.
   function onPointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    dragging.current = true;
+    pressed.current = true;
+    dragging.current = false;
+    wasDrag.current = false;
     startX.current = e.clientX;
     dx.current = 0;
-    stageRef.current?.classList.add('is-dragging');
-    e.currentTarget.setPointerCapture?.(e.pointerId);
   }
 
   function onPointerMove(e) {
-    if (!dragging.current) return;
+    if (!pressed.current) return;
     dx.current = e.clientX - startX.current;
+    if (!dragging.current) {
+      // Below the threshold this is still a tap — a finger never lands
+      // perfectly still, and 4px of drift must not cost a navigation.
+      if (Math.abs(dx.current) < DRAG_START) return;
+      dragging.current = true;
+      stageRef.current?.classList.add('is-dragging');
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
     // Rubber-band past the ends so the deck resists rather than tearing off.
     stageRef.current?.style.setProperty('--drag', `${dx.current * 0.9}px`);
   }
 
   function onPointerUp() {
-    if (!dragging.current) return;
+    const wasPressed = pressed.current;
+    pressed.current = false;
+    // Never dragged -> it was a tap. Leave everything alone so the click
+    // reaches the link.
+    if (!wasPressed || !dragging.current) return;
     dragging.current = false;
     const stage = stageRef.current;
     stage?.classList.remove('is-dragging');
@@ -124,12 +177,12 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
     // A short flick counts as much as a long drag; threshold scales with the
     // card so it feels the same on a phone and a laptop.
     const threshold = (stage?.offsetWidth || 300) * 0.12;
-    // Remember whether this gesture was a drag, so the click that fires
-    // immediately after doesn't navigate. Without this, every swipe would
-    // also open whichever category you happened to start the swipe on.
-    wasDrag.current = Math.abs(dx.current) > 6;
+    // This gesture WAS a drag, so the click that fires straight after it
+    // must not navigate — otherwise every swipe opens whichever category
+    // the swipe happened to start on.
+    wasDrag.current = true;
     if (Math.abs(dx.current) > threshold) take(active + (dx.current < 0 ? 1 : -1));
-    else if (wasDrag.current) setUserTook(true);
+    else setUserTook(true);
     dx.current = 0;
   }
 
@@ -160,7 +213,7 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
 
   return (
     <div
-      className="deck"
+      className={`deck${reduce ? ' deck--fade' : ''}`}
       role="group"
       aria-roledescription="carousel"
       aria-label="Product categories"
@@ -232,27 +285,6 @@ export default function CategoryDeck({ categories = [], counts = {} }) {
             </div>
           );
         })}
-      </div>
-
-      <div className="deck__controls">
-        <button type="button" className="deck__arrow" onClick={() => take(active - 1)} aria-label="Previous category">‹</button>
-
-        {/* Dots double as the answer to "how many categories are there" —
-            the thing a carousel otherwise hides. */}
-        <div className="deck__dots">
-          {categories.map((c, i) => (
-            <button
-              key={c.id ?? c.slug}
-              type="button"
-              className={`deck__dot${i === active ? ' is-on' : ''}`}
-              onClick={() => take(i)}
-              aria-label={c.name}
-              aria-current={i === active ? 'true' : undefined}
-            />
-          ))}
-        </div>
-
-        <button type="button" className="deck__arrow" onClick={() => take(active + 1)} aria-label="Next category">›</button>
       </div>
 
       {/* The blurb sits outside the stage so changing it can't resize a card

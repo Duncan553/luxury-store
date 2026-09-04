@@ -191,9 +191,16 @@ export default function About() {
             asymmetry and the picture is the better opening. */}
         <div className="container aed">
           <figure className="aed__fig reveal reveal-delay-2">
+            {/* Served from our own storage, already graded to the same mono
+                as the hero plate and the category covers, rather than a
+                colour file greyscaled in the browser — one grade, one
+                publication. Two widths so a phone fetches 13KB, not 38. */}
             <img
-              src="https://images.unsplash.com/photo-1705909237050-7a7625b47fac?auto=format&fit=crop&w=800&q=80"
-              alt="Structured black leather bag"
+              src="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-800.jpg"
+              srcSet="https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-440.jpg 440w, https://llxeazcqroaojjhogpjx.supabase.co/storage/v1/object/public/images/hero/about-mono-800.jpg 800w"
+              sizes="(max-width: 859px) 92vw, 38vw"
+              alt="A black leather tote held by its handles"
+              width="800" height="1000"
               loading="lazy"
             />
             <figcaption className="aed__cap">Nairobi, Kenya — est. 2024</figcaption>

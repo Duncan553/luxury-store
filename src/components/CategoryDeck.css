@@ -53,8 +53,13 @@
     rotateY(calc(var(--d) * var(--rot) * -1))
     scale(calc(1 - min(abs(var(--d)), 2) * var(--scale-step)));
   opacity: calc(1 - min(abs(var(--d)), 2) * 0.34);
-  transition: transform 0.62s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity 0.5s ease;
+  /* Ease-OUT, not ease-in-out: the card leaves immediately and settles
+     into place, which is what reads as responsive. An ease-in start makes
+     the deck feel like it's deciding whether to move. 0.55s is inside the
+     ~600ms ceiling past which a UI transition starts to feel laggy rather
+     than smooth. */
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.42s ease;
   /* transform and opacity are the only two properties that animate purely
      on the compositor — no layout, no paint. Everything that moves here is
      one of those two, which is what keeps it at frame rate on a cheap
@@ -165,50 +170,6 @@
    just stops them competing for the eye. */
 .deck__card:not(.is-active) .deck__name { color: var(--muted); }
 
-.deck__controls {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-}
-/* 44px tap targets. The product cards shipped at 34px earlier in this
-   project and had to be fixed after measuring — not repeating that. */
-.deck__arrow {
-  width: 44px; height: 44px;
-  display: grid; place-items: center;
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  color: var(--muted);
-  font-size: 20px; line-height: 1;
-  cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
-}
-.deck__arrow:hover { border-color: var(--gold); color: var(--gold-light); }
-
-.deck__dots { display: flex; gap: 6px; }
-.deck__dot {
-  /* 8px dot, 30x44 hit area — the target is finger-sized even though the
-     dot isn't. */
-  width: 30px; height: 44px;
-  padding: 0;
-  background: none;
-  border: 0;
-  cursor: pointer;
-  position: relative;
-}
-.deck__dot::after {
-  content: '';
-  position: absolute;
-  inset: 50% 0 auto 50%;
-  transform: translate(-50%, -50%);
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--border);
-  transition: background 0.25s, width 0.25s;
-}
-.deck__dot.is-on::after { background: var(--gold); width: 22px; border-radius: 4px; }
-
 .deck__blurb {
   margin: 18px auto 0;
   max-width: 46ch;
@@ -268,4 +229,18 @@
 @media (prefers-reduced-motion: reduce) {
   ::view-transition-old(root),
   ::view-transition-new(root) { animation: none; }
+}
+
+/* Reduced-motion mode.
+   Two earlier versions of this were wrong. The first stacked every card at
+   translate3d(0,0,0), which destroyed the fan entirely. The second removed
+   the transform transition, which left the cards TELEPORTING between
+   positions — the deck jumped instead of moving, and that jump is what
+   made it look unfinished.
+   The setting asks for less motion, not none and not a different layout.
+   So the fan is untouched and the slide is kept — just shorter and flatter
+   than the full version. */
+.deck--fade .deck__card {
+  transition: transform 0.34s cubic-bezier(0.33, 1, 0.68, 1),
+              opacity 0.28s ease;
 }
