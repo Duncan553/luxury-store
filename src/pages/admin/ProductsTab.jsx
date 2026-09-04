@@ -574,14 +574,21 @@ export default function ProductsTab({ products, categories, setProducts }) {
                     {p.category || '—'}
                   </td>
                   <td>
-                    <input
-                      type="number"
-                      className="inline-edit"
-                      value={p.price ?? ''}
-                      min="0"
-                      onChange={e => handleFieldChange(p, 'price', e.target.value)}
-                      onBlur={e => handleFieldChange(p, 'price', e.target.value)}
-                    />
+                    {/* Currency label beside the field: the column showed a
+                        bare number in a box, which reads as a quantity as
+                        easily as a price. */}
+                    <span className="price-cell">
+                      <span className="price-cell__cur">Ksh</span>
+                      <input
+                        type="number"
+                        className="inline-edit"
+                        aria-label={`Price for ${p.name} in Kenyan shillings`}
+                        value={p.price ?? ''}
+                        min="0"
+                        onChange={e => handleFieldChange(p, 'price', e.target.value)}
+                        onBlur={e => handleFieldChange(p, 'price', e.target.value)}
+                      />
+                    </span>
                   </td>
                   <td>
                     <div className="stock-ctrl">
