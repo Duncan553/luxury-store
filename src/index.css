@@ -252,7 +252,7 @@ select option { background: var(--surface2); }
 .reveal {
   opacity: 0;
   transform: translateY(28px);
-  transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out);
+  transition: opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out);
 }
 .reveal.visible {
   opacity: 1;

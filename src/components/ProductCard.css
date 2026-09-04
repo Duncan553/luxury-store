@@ -135,8 +135,6 @@
   margin-top: 12px;
 }
 .pcard__price { font-size: 13px; font-weight: 500; color: var(--gold); letter-spacing: 0.04em; }
-.pcard__oos   { font-size: 10px; letter-spacing: 0.1em; color: var(--muted); text-transform: uppercase; }
-
 /* Was a fixed 34×34px circle sized for a single '+' glyph. Now the label
    reads "Add to Cart" (fix for the mobile-invisible button above), so the
    button has to size to real words, not a fixed square — auto width with
@@ -193,3 +191,4 @@
      upsizes the tap target to a real 44px, the accessibility minimum. */
   .pcard__btn { min-height: 44px; padding: 0 16px; font-size: 10.5px; }
 }
+
