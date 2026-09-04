@@ -3,7 +3,10 @@ import './ProductCard.css';
 
 export default function ProductCard({ product, onOpen }) {
   const { addItem, vacationMode } = useCart();
-  const { id, name, price, image_url, status, category } = product;
+  // quantity has to travel into the cart snapshot — without it, the cart's
+  // stock cap (CartContext.jsx) has nothing to check against and silently
+  // allows unlimited quantity of anything added from this card.
+  const { id, name, price, image_url, status, category, quantity } = product;
 
   const isUnavailable = status === 'Out of Stock';
   const isPreOrder    = status === 'Pre-Order';
@@ -53,7 +56,7 @@ export default function ProductCard({ product, onOpen }) {
           {!isUnavailable && (
             <button
               className="pcard__overlay-btn"
-              onClick={(e) => { e.stopPropagation(); addItem({ id, name, price, image_url, status, category }); }}
+              onClick={(e) => { e.stopPropagation(); addItem({ id, name, price, image_url, status, category, quantity }); }}
             >
               {addLabel}
             </button>
@@ -69,7 +72,7 @@ export default function ProductCard({ product, onOpen }) {
           {isUnavailable
             ? <button className="pcard__btn pcard__btn--oos" disabled>Sold Out</button>
             : <button className="pcard__btn"
-                onClick={() => addItem({ id, name, price, image_url, status, category })}>
+                onClick={() => addItem({ id, name, price, image_url, status, category, quantity })}>
                 {addShort}
               </button>
           }

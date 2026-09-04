@@ -67,10 +67,27 @@ export function CartProvider({ children }) {
       });
   }, []);
 
+  // Real bug, not just a described one: the cart never checked stock. A
+  // customer could add more of an item than actually exists — 50 units of
+  // a one-of-one bag — and the site would let them, right up until the
+  // owner has to apologise after the fact. cartMax() is the one place that
+  // decides the ceiling; both addItem and updateQty go through it.
+  //
+  // Pre-Order items have no real ceiling (that's the point of pre-order),
+  // so they fall back to a high number rather than 0/undefined blocking
+  // them entirely. A product with quantity ?? undefined (legacy rows with
+  // no stock count set) is treated the same way — never silently blocks
+  // a sale over data that was never filled in.
+  const cartMax = (item) =>
+    item.status === 'Pre-Order' || item.quantity == null ? 999 : item.quantity;
+
   const addItem = useCallback((product) => {
     setItems((prev) => {
       const existing = prev.find((i) => i.id === product.id);
-      if (existing) return prev.map((i) => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
+      if (existing) {
+        const max = cartMax(existing);
+        return prev.map((i) => i.id === product.id ? { ...i, qty: Math.min(max, i.qty + 1) } : i);
+      }
       return [...prev, { ...product, qty: 1 }];
     });
     setIsOpen(true);
@@ -80,7 +97,11 @@ export function CartProvider({ children }) {
 
   const updateQty = useCallback((id, delta) => {
     setItems((prev) =>
-      prev.map((i) => i.id === id ? { ...i, qty: i.qty + delta } : i).filter((i) => i.qty > 0)
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        const max = cartMax(i);
+        return { ...i, qty: Math.min(max, i.qty + delta) };
+      }).filter((i) => i.qty > 0)
     );
   }, []);
 

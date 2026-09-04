@@ -413,9 +413,10 @@ export default function ProductsTab({ products, categories, setProducts }) {
 
   async function adjustStock(product, delta) {
     const newQty = Math.max(0, (product.quantity ?? 0) + delta);
-    const newStatus = product.status === 'Pre-Order'
-      ? product.status
-      : newQty <= 0 ? 'Out of Stock' : newQty <= 10 ? 'Low Stock' : 'Available';
+    // Was its own hand-copied ladder here too (a third copy of the same
+    // logic, alongside AdminDashboard.jsx's — see adminUtils.js for why
+    // that's worth collapsing to one place).
+    const newStatus = product.status === 'Pre-Order' ? product.status : statusFromQty(newQty);
 
     const snapshot = products;
     setProducts(prev => prev.map(p =>

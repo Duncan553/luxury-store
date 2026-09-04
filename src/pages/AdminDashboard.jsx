@@ -13,7 +13,7 @@ import { useEffect, useState, useMemo, useRef, lazy, Suspense } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { fmt, BLANK_SETTINGS } from '../lib/adminUtils';
+import { fmt, BLANK_SETTINGS, statusFromQty } from '../lib/adminUtils';
 import './AdminDashboard.css';
 
 // ── Lazy-loaded tabs ──────────────────────────────────────────────────────────
@@ -315,11 +315,10 @@ export default function AdminDashboard() {
   // ── Action Center inline handlers ───────────────────────────────────────────
   async function acAddStock(product) {
     const newQty = (product.quantity ?? 0) + 1;
-    // Full status ladder — same logic as ProductsTab so behaviour is consistent.
-    const newStatus =
-      product.status === 'Pre-Order' ? 'Pre-Order' :
-      newQty <= 0  ? 'Out of Stock' :
-      newQty <= 10 ? 'Low Stock'    : 'Available';
+    // Was its own hand-copied ladder here — now calls the one shared,
+    // correct version (adminUtils.js) instead of a second copy that could
+    // drift out of sync with it again.
+    const newStatus = product.status === 'Pre-Order' ? 'Pre-Order' : statusFromQty(newQty);
 
     const snap = products;
     setProducts(prev => prev.map(p =>
