@@ -347,10 +347,17 @@ export default function AdminDashboard() {
 
   // ── Tab definitions (badges use live data) ──────────────────────────────────
   const TABS = [
-    { key: 'orders',     label: 'Orders',     badge: kpi.reconcileCount || null },
-    { key: 'products',   label: 'Products',   badge: kpi.lowStockCount || null },
+    // Every badge now carries a title saying WHAT it counts. Without one
+    // "Products 12" read as "12 products" when there are 42 — the number is
+    // the low-stock count. A bare number next to a noun is always read as a
+    // count of that noun.
+    { key: 'orders',     label: 'Orders',     badge: kpi.reconcileCount || null,
+      badgeTitle: 'orders needing attention' },
+    { key: 'products',   label: 'Products',   badge: kpi.lowStockCount || null,
+      badgeTitle: 'products low on stock' },
     { key: 'categories', label: 'Categories', badge: null                      },
-    { key: 'reviews',    label: 'Reviews',    badge: kpi.reviewCount   || null },
+    { key: 'reviews',    label: 'Reviews',    badge: kpi.reviewCount   || null,
+      badgeTitle: 'reviews awaiting approval' },
     { key: 'settings',   label: 'Settings',   badge: null                      },
   ];
 
@@ -363,8 +370,10 @@ export default function AdminDashboard() {
         <span className="admin-logo">Kamili Admin</span>
         <div className="admin-topbar__right">
           <span className="admin-email">{user?.email}</span>
-          <button className="btn btn-outline"
-            style={{ height: 36, padding: '0 16px', fontSize: 12 }}
+          {/* Height lives in .admin-logout, not in an inline style: an
+              inline value can't be overridden by a media query, so the
+              button was stuck at 36px on phones. */}
+          <button className="btn btn-outline admin-logout"
             onClick={handleLogout}>
             Log out
           </button>
@@ -559,7 +568,11 @@ export default function AdminDashboard() {
               className={`admin-tab-btn${activeTab === t.key ? ' active' : ''}`}
               onClick={() => setActiveTab(t.key)}>
               {t.label}
-              {t.badge ? <span className="admin-tab-badge">{t.badge}</span> : null}
+              {t.badge
+                ? <span className="admin-tab-badge"
+                    title={`${t.badge} ${t.badgeTitle}`}
+                    aria-label={`${t.badge} ${t.badgeTitle}`}>{t.badge}</span>
+                : null}
             </button>
           ))}
         </div>

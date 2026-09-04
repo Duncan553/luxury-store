@@ -1,5 +1,5 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
@@ -29,13 +29,22 @@ function PrivateRoute({ children }) {
 }
 
 function AppShell() {
+  // The storefront chrome must NOT render on admin routes. It was rendering
+  // everywhere, so on the dashboard the shop's fixed navbar sat directly on
+  // top of the admin header: "KAMILI ADMIN" overlapped the shop's wordmark
+  // and the signed-in email disappeared behind the cart badge. The footer
+  // and the cart drawer have no business there either — an admin has no
+  // cart, and the shop's social links are noise in a management screen.
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith('/admin');
+
   return (
     <>
       <ScrollProgress />
       {/* B1: shown only in Instagram/FB/TikTok/Snapchat in-app browsers */}
-      <InAppBrowserBanner />
-      <Navbar />
-      <CartModal />
+      {!isAdmin && <InAppBrowserBanner />}
+      {!isAdmin && <Navbar />}
+      {!isAdmin && <CartModal />}
       <main>
         {/* Blank fallback, not the LoadingScreen splash again — a lazy
             chunk is usually cached and loads in well under 100ms after the
@@ -53,7 +62,7 @@ function AppShell() {
           </Routes>
         </Suspense>
       </main>
-      <Footer />
+      {!isAdmin && <Footer />}
     </>
   );
 }

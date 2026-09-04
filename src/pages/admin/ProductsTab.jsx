@@ -283,19 +283,44 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
       const status = form.status === 'Available' || form.status === 'Low Stock'
         ? statusFromQty(qty ?? 999)
         : form.status;
-      const { data, error: err } = await supabase.from('products').insert({
+      const row = {
         name:      form.name.trim(),
         price:     Number(form.price),
         category:  form.category || null,
         status,
         quantity:  qty,
-        colours:   parseColours(form.colours),
         image_url,
         created_at: new Date().toISOString(),
-      }).select().single();
+      };
+      const colours = parseColours(form.colours);
+      if (colours) row.colours = colours;
+      // Set when the colours column had to be dropped, so the success
+      // message can say so. A local flag, not the toast state — `toast`
+      // lives in ProductsTab, not in this modal, and reading it here threw
+      // a ReferenceError.
+      let noteColoursSkipped = false;
+
+      let { data, error: err } = await supabase.from('products').insert(row).select().single();
+
+      // The colours column arrives with a migration that may not have been
+      // applied yet. Sending a key PostgREST doesn't know rejects the WHOLE
+      // insert with PGRST204 — which broke Add Product outright, not just
+      // the colours part of it. So if that's the failure, drop the column
+      // and save the product anyway: losing the colour list is a nuisance,
+      // losing the ability to add stock is not.
+      if (err && (err.code === 'PGRST204' || /colours/i.test(err.message || ''))) {
+        delete row.colours;
+        ({ data, error: err } = await supabase.from('products').insert(row).select().single());
+        if (!err) noteColoursSkipped = true;
+      }
       if (err) throw err;
       onAdded(data);
-      showToast('Product added.', 'success');
+      showToast(
+        noteColoursSkipped
+          ? 'Product added — colours need the database migration first.'
+          : 'Product added.',
+        'success'
+      );
       onClose();
     } catch (err) {
       setError(err.message || 'Failed to add product.');
