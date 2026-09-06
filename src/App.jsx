@@ -1,5 +1,5 @@
-import { Suspense, lazy } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Suspense, lazy, useLayoutEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 
@@ -37,6 +37,31 @@ function AppShell() {
   // cart, and the shop's social links are noise in a management screen.
   const { pathname } = useLocation();
   const isAdmin = pathname.startsWith('/admin');
+
+  // Reset the scroll position on every route change.
+  //
+  // A real multi-page site gets this for free: each click builds a brand new
+  // document, and a new document starts at scroll 0. An SPA never does that.
+  // React Router only swaps which component renders inside <main> — it is the
+  // SAME document the whole time, and scroll position belongs to the document,
+  // not to the React tree. So a customer who scrolled 2000px down the home page
+  // and then tapped "Bags" kept that 2000px: the new page mounted underneath a
+  // window that was still parked two screens down, dumping them into the middle
+  // (or past the end) of a page they had never seen the top of.
+  //
+  // navType 'POP' = the browser's back/forward button. Those we deliberately
+  // leave alone, so returning to a page puts the customer back where they were
+  // instead of at the top — that's what a back button is FOR. Only PUSH and
+  // REPLACE (an actual link click) scroll up.
+  //
+  // useLayoutEffect, not useEffect: layout effects run before the browser
+  // paints, so the new page is never drawn at the old offset for a frame. With
+  // useEffect you can catch a visible jump on a slow phone.
+  const navType = useNavigationType();
+  useLayoutEffect(() => {
+    if (navType === 'POP') return;
+    window.scrollTo(0, 0);
+  }, [pathname, navType]);
 
   return (
     <>
