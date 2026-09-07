@@ -82,6 +82,13 @@
   border: 1px solid var(--border);
   border-radius: 10px;
   user-select: none;
+  /* The safety net, not the mechanism. Covers are converted to greyscale
+     when they are uploaded; this guarantees the row still reads as one set
+     if a colour file ever gets through (an upload whose canvas step failed,
+     or a cover written straight into the database). grayscale(1) with no
+     contrast bump, so the four already-mono covers render exactly as they
+     do today and only a stray colour one changes. */
+  filter: grayscale(1);
 }
 .deck__ph { border-style: dashed; display: grid; place-items: center; }
 .deck__ph::after {

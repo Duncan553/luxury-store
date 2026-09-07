@@ -90,6 +90,85 @@ export async function detectBackground(file) {
   }
 }
 
+// ── Speck removal ──────────────────────────────────────
+// Keeps only the largest connected shape in a cutout and erases the rest.
+//
+// The background model does not return one clean object: it returns whatever
+// it judged to be foreground, which routinely includes a leaf, a price tag,
+// a bit of shelf — left floating in space once the backdrop is gone. On a
+// dark card those go unnoticed; on the white stage they read as smudges
+// beside the product, which is worse than not cutting the photo at all.
+//
+// A product photo has one subject, so the largest connected region IS the
+// product and anything disconnected from it is debris. Measured on a
+// downscaled alpha mask (a flood fill across 12 megapixels in JS is the
+// same mistake the first trim made), then the mask is scaled back up and
+// used to erase at full resolution.
+//
+// Returns the file untouched on any doubt — including when the leftovers
+// are a large share of the subject, which is the signature of a photo with
+// two genuine objects rather than one and some rubbish.
+export async function removeSpecks(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const W = Math.min(320, bmp.width);
+    const H = Math.max(1, Math.round((W * bmp.height) / bmp.width));
+    const small = document.createElement('canvas');
+    small.width = W; small.height = H;
+    const sctx = small.getContext('2d', { willReadFrequently: true });
+    sctx.drawImage(bmp, 0, 0, W, H);
+    const { data } = sctx.getImageData(0, 0, W, H);
+
+    // Label connected opaque regions (4-neighbour flood fill).
+    const label = new Int32Array(W * H).fill(-1);
+    const sizes = [];
+    const stack = [];
+    const solid = (idx) => data[idx * 4 + 3] >= 40;
+    for (let i = 0; i < W * H; i++) {
+      if (label[i] !== -1 || !solid(i)) continue;
+      const id = sizes.length; let n = 0;
+      stack.push(i); label[i] = id;
+      while (stack.length) {
+        const c = stack.pop(); n++;
+        const x = c % W, y = (c / W) | 0;
+        if (x > 0     && label[c - 1] === -1 && solid(c - 1)) { label[c - 1] = id; stack.push(c - 1); }
+        if (x < W - 1 && label[c + 1] === -1 && solid(c + 1)) { label[c + 1] = id; stack.push(c + 1); }
+        if (y > 0     && label[c - W] === -1 && solid(c - W)) { label[c - W] = id; stack.push(c - W); }
+        if (y < H - 1 && label[c + W] === -1 && solid(c + W)) { label[c + W] = id; stack.push(c + W); }
+      }
+      sizes.push(n);
+    }
+    if (sizes.length < 2) { bmp.close?.(); return file; }        // nothing to clean
+
+    const main = sizes.indexOf(Math.max(...sizes));
+    const debris = sizes.reduce((t, n, i) => (i === main ? t : t + n), 0);
+    // Big leftovers mean this is probably a photo with more than one real
+    // object — leave it alone rather than delete half the product.
+    if (!debris || debris / sizes[main] > 0.35) { bmp.close?.(); return file; }
+
+    const out = document.createElement('canvas');
+    out.width = bmp.width; out.height = bmp.height;
+    const octx = out.getContext('2d');
+    octx.drawImage(bmp, 0, 0);
+    bmp.close?.();
+    const sx = out.width / W, sy = out.height / H;
+    octx.globalCompositeOperation = 'destination-out';          // punch holes in alpha
+    octx.fillStyle = '#000';
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        const l = label[y * W + x];
+        // +1px of slop each way, so the erase covers the speck's soft edge.
+        if (l !== -1 && l !== main) octx.fillRect(x * sx - 1, y * sy - 1, sx + 2, sy + 2);
+      }
+    }
+    const blob = await new Promise(r => out.toBlob(r, 'image/png'));
+    return blob ? new File([blob], file.name, { type: 'image/png' }) : file;
+  } catch {
+    return file;
+  }
+}
+
+
 // ── Trim ─────────────────────────────────────────────────────────────────
 // Finds the dead border on a photo that sits on a clean backdrop, and
 // returns it as a crop box — { x, y, w, h } in the file's own pixels, or
@@ -216,8 +295,20 @@ export async function uploadProductPhoto(file, { removeBg = false, onStatus } = 
     try {
       onStatus?.('Removing background… 0%');
       const cutout = await removeBackground(file, pct => onStatus?.(`Removing background… ${pct}%`));
+      onStatus?.('Background removed ✓ tidying…');
+      // The model leaves stray background objects floating beside the
+      // product once the backdrop is gone; drop anything not connected to it.
+      const cleaned = await removeSpecks(cutout);
       onStatus?.('Background removed ✓ uploading…');
-      return await uploadImage(cutout, 'products', { isCutout: true });
+      // Trim the cutout too. Removing a background leaves a transparent
+      // margin wherever the product did not reach the edge of the original
+      // frame, so two photos of the same bag come out different sizes on the
+      // white stage — the exact raggedness the trim exists to prevent. The
+      // box is measured on the cutout, where 'transparent' is the backdrop.
+      const cutCrop = await findTrimBox(cleaned, 'transparent');
+      return await uploadImage(cleaned, 'products', {
+        isCutout: true, hasAlpha: true, crop: cutCrop,
+      });
     } catch (err) {
       // A failed cut must never cost the admin the upload: a plain photo
       // beats no product at all. Fall through to the untouched path.
@@ -369,6 +460,51 @@ export async function uploadImage(
   return url;
 }
 
+// ── Category covers: match the set ───────────────────────────────────────
+// The four covers already on the shop are 760x1013 — exactly 3:4 — and pure
+// black and white (measured: colourfulness 0.000). A cover uploaded through
+// admin got none of that: it kept its own colours and its own shape, and the
+// deck's object-fit: cover then CROPPED it to the card. So one new category
+// arrived in colour, cut off at the edges, and sized unlike its neighbours —
+// the whole row stopped reading as a set.
+//
+// This normalises an upload to the set instead of hoping the owner supplies
+// a matching file:
+//   * greyscale, because the deck is editorial framing. The site's own rule
+//     (Home.css) is that the editorial frame is mono and the MERCHANDISE is
+//     not — a buyer choosing between a tan bag and a black one has to see
+//     the difference. Category art is frame, so it is mono; product photos
+//     stay in colour and this never touches them.
+//   * fitted into a 3:4 frame rather than cropped to it, so nothing is cut
+//     off, and every cover is the same shape and therefore the same size on
+//     the card.
+//   * whatever the 3:4 frame does not cover is filled with a blurred, dimmed
+//     copy of the same picture. Plain empty bands were the first attempt and
+//     a wide photo left 66% of the card empty — technically uncropped, and
+//     it looked broken. The blur reads as depth of field, so the card is
+//     full-bleed like its neighbours while the actual photo is still whole.
+function normaliseCover(bitmap) {
+  const TARGET = 3 / 4;
+  const w = 1200, h = Math.round(w / TARGET);       // 1200x1600, same shape as the set
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // 1. Backdrop: the same picture scaled to COVER the frame, blurred and
+  //    dimmed. It is allowed to crop, because nobody reads it as the photo.
+  const fill = Math.max(w / bitmap.width, h / bitmap.height);
+  const fw = bitmap.width * fill, fh = bitmap.height * fill;
+  ctx.filter = 'grayscale(1) blur(30px) brightness(0.5)';
+  ctx.drawImage(bitmap, (w - fw) / 2, (h - fh) / 2, fw, fh);
+
+  // 2. The picture itself: contained, centred, nothing cut off.
+  const scale = Math.min(w / bitmap.width, h / bitmap.height);
+  const dw = Math.round(bitmap.width * scale), dh = Math.round(bitmap.height * scale);
+  ctx.filter = 'grayscale(1) contrast(1.06)';       // same treatment as .editorial__img
+  ctx.drawImage(bitmap, Math.round((w - dw) / 2), Math.round((h - dh) / 2), dw, dh);
+  return canvas;
+}
+
 // Category covers, which need more than the plain upload above.
 //
 // The category deck derives a srcset from the cover's filename: a cover
@@ -387,7 +523,25 @@ export async function uploadImage(
 // broken shop.
 export async function uploadCover(file, slug, { onProgress, onInfo } = {}) {
   const originalMB = (file.size / 1024 / 1024).toFixed(1);
+  // The normalised cover is fully opaque (the blurred backdrop fills the
+  // frame), so no alpha channel is needed and the JPEG fallback is safe.
   const { mime, ext } = targetFormat(false);
+
+  // Normalise first; everything below then resizes an image that is already
+  // the right shape and tone. Falls back to the original file if the canvas
+  // step fails, which is a cover that looks out of place rather than no
+  // cover at all.
+  let source = file;
+  try {
+    const bmp = await createImageBitmap(file);
+    const canvas = normaliseCover(bmp);
+    bmp.close?.();
+    const blob = await new Promise(r => canvas.toBlob(r, mime, 0.9));
+    if (blob) source = new File([blob], file.name, { type: mime });
+  } catch (err) {
+    console.warn('[cover normalise]', err.message);
+  }
+  file = source;
   // A folder per upload, so replacing a cover never has to overwrite a
   // file — an overwrite keeps the same URL, and the CDN would go on
   // serving the old picture from cache.
