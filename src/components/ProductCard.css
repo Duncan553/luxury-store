@@ -31,17 +31,38 @@
    floating cardboard cutout rather than a real product photo, so it's
    gone; a flat white background is what marketplace listings actually
    look like, and it's what was asked for.
-   object-fit: contain (not cover) still matters — a cutout must never be
-   cropped. Photos without a cutout keep the original dark card + cover-fit
-   treatment untouched below. */
+
+   EVERY product photo is now shown whole — object-fit: contain, not the
+   cover-fit this used to have. Cover fills the 4:5 card by cropping
+   whatever does not fit, which on a landscape or square photo silently
+   cut the ends off the product: a bag lost its handle, a chain lost its
+   clasp. A letterboxed photo is a cosmetic cost; a shopper who cannot see
+   what they are buying is a real one. The card keeps a fixed 4:5 box so
+   the grid still lines up — the photo is centred inside it. */
 .pcard__img {
   position: relative; overflow: hidden;
   background: var(--surface2);
 }
 .pcard__img .img-cover {
+  object-fit: contain;                      /* show all of it, crop nothing */
+  /* 8% — the SAME inset as the white stage below, deliberately. At 4% a
+     plain photo ran nearly edge-to-edge while a cutout sat inside its 8%
+     stage, so the plain one read as bigger and the grid looked ragged.
+     Matching the two means every product occupies an identical inner box
+     no matter which treatment it got.
+     Padding on the IMAGE, not the box, so the hover zoom has room to grow
+     into, and so the Pre-Order / Out of Stock badges — positioned against
+     the box — don't shift. */
+  padding: 8%;
+  box-sizing: border-box;
   transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-.pcard:hover .pcard__img .img-cover { transform: scale(1.08); }
+/* Was 1.08, which cropped the photo the moment you hovered it — the exact
+   thing contain is here to prevent. 1.04 grows into the 4% padding. */
+.pcard:hover .pcard__img .img-cover { transform: scale(1.04); }
+@media (prefers-reduced-motion: reduce) {
+  .pcard:hover .pcard__img .img-cover { transform: none; }
+}
 .pcard__img-placeholder { width: 100%; height: 100%; background: var(--surface3); }
 
 .pcard__img--cutout {
@@ -52,10 +73,22 @@
 .pcard__img--cutout .img-cover {
   width: 100%; height: 100%;
   object-fit: contain;                      /* never crop a cutout */
+  /* The white stage above already pads by 8%; drop the image's own 4% so a
+     cutout isn't padded twice and rendered smaller than a plain photo. */
+  padding: 0;
 }
 .pcard:hover .pcard__img--cutout .img-cover { transform: scale(1.04); }
 @media (prefers-reduced-motion: reduce) {
   .pcard:hover .pcard__img--cutout .img-cover { transform: none; }
+}
+
+/* Multi-photo marker — top RIGHT, because the status badges own top left. */
+.pcard__count {
+  position: absolute; top: 12px; right: 12px; z-index: 1;
+  display: flex; align-items: center; gap: 4px;
+  background: rgba(0,0,0,0.55); color: #fff;
+  font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
+  padding: 3px 7px;
 }
 
 /* Badge */

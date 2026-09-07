@@ -41,3 +41,26 @@ editor) on 2026-09-04 and verified afterwards:
   look unapplied for two days. **If you apply a migration, add it to this
   file in the same session.** An unrecorded migration reads exactly like a
   forgotten one.
+
+- `20260907000000_product_images.sql`
+  Applied **2026-09-07** with `npx supabase db push` (not by hand), and
+  verified immediately against the live `kamili` project:
+  - `products.images` exists; all **44** rows backfilled from `image_url`,
+    none left empty.
+  - `images[0] === image_url` on every row, so the
+    `trg_products_sync_cover` trigger holds the invariant it was written for.
+  - Trigger re-checked live: writing a 3-photo array to one product set
+    `image_url` to the first entry on its own. That product was restored to
+    its original single photo straight after.
+
+  **History drift fixed in the same session.** `20260903000000`,
+  `20260904000000` and `20260904120000` were applied by hand in the SQL
+  editor and so were missing from Supabase's `schema_migrations` table.
+  `supabase db push` would have RE-RUN all three — and
+  `20260903000000` ends with
+  `update payments set status='cancelled' where status in ('pending','failed')`,
+  which can rewrite live order rows. They were marked applied with
+  `npx supabase migration repair --status applied <version>` (metadata only,
+  no SQL executed) before pushing, so only the new migration ran.
+  **Apply migrations with `db push` from now on** — applying by hand is what
+  created this trap, and the next person to push would have sprung it.

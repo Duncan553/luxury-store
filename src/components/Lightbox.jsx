@@ -1,6 +1,7 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
+import { galleryOf, isCutoutUrl } from '../lib/gallery';
 import './Lightbox.css';
 
 const WA_ICON = (
@@ -25,6 +26,39 @@ const SWATCH = {
 
 export default function Lightbox({ product, onClose, onPrev, onNext, hasPrev, hasNext }) {
   const { addItem, openCheckout } = useCart();
+
+  // ── Photo carousel ──────────────────────────────────────────────────
+  // Built on native scroll + CSS scroll-snap rather than a carousel library
+  // or a drag handler. A swipe on a phone is then the browser's own scroll:
+  // real momentum, real rubber-banding, interruptible mid-flick, and it
+  // costs no JavaScript to run. Our code only ever READS where the scroll
+  // ended up and moves it when a dot or arrow is clicked.
+  const gallery = galleryOf(product);
+  const [slide, setSlide] = useState(0);
+  const trackRef = useRef(null);
+
+  // A different product opens into the same DOM node, which keeps the old
+  // scroll position — without this you'd open a one-photo product already
+  // scrolled past its only photo.
+  useEffect(() => {
+    setSlide(0);
+    if (trackRef.current) trackRef.current.scrollLeft = 0;
+  }, [product?.id]);
+
+  const goTo = (i) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollTo({ left: i * el.clientWidth, behavior: 'smooth' });
+  };
+
+  // The scroll position is the source of truth, not a click handler: a swipe
+  // moves it without React ever hearing about it, so the dots are derived
+  // from where the track actually is.
+  const onTrackScroll = (e) => {
+    const el = e.currentTarget;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setSlide(prev => (prev === i ? prev : i));
+  };
 
   const handleKey = useCallback((e) => {
     if (e.key === 'Escape')    onClose();
@@ -53,16 +87,49 @@ export default function Lightbox({ product, onClose, onPrev, onNext, hasPrev, ha
           exit={{ opacity: 0, scale: 0.94 }}
           transition={{ duration: 0.35, ease: [0.25, 0.46, 0.45, 0.94] }}>
 
-          {/* Image */}
-          {/* Same isCutout check as ProductCard — without it, a transparent
-              cutout PNG rendered here with object-fit:cover on the dark
-              modal background looked exactly like a cardboard cutout: hard
-              JPEG-style crop, no stage, no shadow. */}
-          <div className={`lb-img-wrap${product.image_url?.includes('/products-cutout/') ? ' lb-img-wrap--cutout' : ''}`}>
-            {product.image_url
-              ? <img src={product.image_url} alt={product.name} className="lb-img" />
-              : <div className="lb-img-placeholder" />}
+          {/* Images — one slide per photo, cover first.
+              The cutout check is per PHOTO, not per product: a gallery can
+              mix a cut-out hero with plain lifestyle shots, and each slide
+              is staged the way its own file wants. Without it a transparent
+              PNG on the dark modal looks like a cardboard cutout. */}
+          <div className="lb-gallery">
+            <div className="lb-track" ref={trackRef} onScroll={onTrackScroll}>
+              {gallery.length
+                ? gallery.map((url, i) => (
+                    <div key={url}
+                      className={`lb-img-wrap${isCutoutUrl(url) ? ' lb-img-wrap--cutout' : ''}`}>
+                      <img src={url} className="lb-img"
+                        alt={`${product.name} — photo ${i + 1} of ${gallery.length}`}
+                        /* only the cover is worth blocking on; the rest load
+                           as the shopper swipes to them */
+                        loading={i === 0 ? 'eager' : 'lazy'} />
+                    </div>
+                  ))
+                : <div className="lb-img-wrap"><div className="lb-img-placeholder" /></div>}
+            </div>
+
             {product.status === 'Pre-Order' && <span className="lb-badge">Pre-Order</span>}
+
+            {gallery.length > 1 && (
+              <>
+                {/* Arrows are for mouse users; a phone just swipes. Hidden
+                    from screen readers because the dots below already name
+                    every photo and would otherwise duplicate them. */}
+                <button className="lb-nav lb-nav--prev" aria-hidden="true" tabIndex={-1}
+                  onClick={() => goTo(slide - 1)} disabled={slide === 0}>‹</button>
+                <button className="lb-nav lb-nav--next" aria-hidden="true" tabIndex={-1}
+                  onClick={() => goTo(slide + 1)} disabled={slide === gallery.length - 1}>›</button>
+
+                <div className="lb-dots">
+                  {gallery.map((url, i) => (
+                    <button key={url} onClick={() => goTo(i)}
+                      className={`lb-dot${i === slide ? ' lb-dot--on' : ''}`}
+                      aria-label={`Photo ${i + 1} of ${gallery.length}`}
+                      aria-current={i === slide} />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Info */}

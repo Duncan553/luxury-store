@@ -1,4 +1,5 @@
 import { useCart } from '../context/CartContext';
+import { galleryOf, isCutoutUrl } from '../lib/gallery';
 import './ProductCard.css';
 
 export default function ProductCard({ product, onOpen }) {
@@ -10,15 +11,16 @@ export default function ProductCard({ product, onOpen }) {
 
   const isUnavailable = status === 'Out of Stock';
   const isPreOrder    = status === 'Pre-Order';
-  // Background-removed photos live in the 'products-cutout/' storage
-  // folder — detected from the path rather than a DB column, so this needs
-  // no schema migration. Cutouts get the white-stage + drop-shadow
-  // treatment defined in ProductCard.css; regular photos keep the original
-  // dark card + cover-fit. Not yet wired into the admin upload flow — this
-  // is a manual proof of concept (see the audit) for the 2 real products
-  // it was safe to run automatically; turning it into a real "Remove
-  // Background" action in ProductsTab is the natural next step.
-  const isCutout = image_url?.includes('/products-cutout/');
+  // The card shows ONE photo — the cover — and says how many more there are.
+  // The gallery itself is swipeable in Quick View: a card that swipes would
+  // fight the tap that opens the product, and on a grid of twelve cards it
+  // would mean twelve scroll containers competing with the page's own
+  // vertical scroll on a phone.
+  const photos = galleryOf(product);
+  const cover  = photos[0] ?? image_url;
+  // White-stage treatment is decided per photo, from the storage path the
+  // uploader wrote — no DB column, so it needed no migration.
+  const isCutout = isCutoutUrl(cover);
 
   // C2: during vacation mode, available products show a pre-order message instead
   // of "Add to Cart". Items still go into the cart and can be paid for — they just
@@ -37,10 +39,22 @@ export default function ProductCard({ product, onOpen }) {
       <div className={`pcard__img aspect-portrait${isCutout ? ' pcard__img--cutout' : ''}`}
         style={{ cursor: onOpen ? 'pointer' : 'default' }}
         onClick={onOpen ? () => onOpen(product) : undefined}>
-        {image_url
-          ? <img src={image_url} alt={name} className="img-cover" loading="lazy" />
+        {cover
+          ? <img src={cover} alt={name} className="img-cover" loading="lazy" />
           : <div className="pcard__img-placeholder" />
         }
+        {/* Only worth showing when there IS more to see. Sits opposite the
+            status badge so the two never collide. */}
+        {photos.length > 1 && (
+          <span className="pcard__count" aria-label={`${photos.length} photos`}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2.5" aria-hidden="true">
+              <rect x="8" y="8" width="13" height="13" rx="1" />
+              <path d="M4 16V4a1 1 0 0 1 1-1h11" />
+            </svg>
+            {photos.length}
+          </span>
+        )}
         {isPreOrder    && <span className="pcard__badge">Pre-Order</span>}
         {isUnavailable && <span className="pcard__badge pcard__badge--oos">Out of Stock</span>}
         {vacationMode && !isPreOrder && !isUnavailable &&

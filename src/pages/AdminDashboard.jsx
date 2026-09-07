@@ -347,14 +347,16 @@ export default function AdminDashboard() {
 
   // ── Tab definitions (badges use live data) ──────────────────────────────────
   const TABS = [
-    // Every badge now carries a title saying WHAT it counts. Without one
-    // "Products 12" read as "12 products" when there are 42 — the number is
-    // the low-stock count. A bare number next to a noun is always read as a
-    // count of that noun.
+    // Badges count their OWN noun: orders needing attention, reviews
+    // awaiting approval. Products had a badge showing the LOW-STOCK count,
+    // which read as "12 products" when there are 44 — a tooltip was added
+    // to explain it, but a tooltip does not exist on a phone and nobody
+    // hovers a number to find out what it means. The Low Stock strip above
+    // already names every one of those products with a +1 button, so the
+    // badge was the ambiguous copy of information shown better elsewhere.
     { key: 'orders',     label: 'Orders',     badge: kpi.reconcileCount || null,
       badgeTitle: 'orders needing attention' },
-    { key: 'products',   label: 'Products',   badge: kpi.lowStockCount || null,
-      badgeTitle: 'products low on stock' },
+    { key: 'products',   label: 'Products',   badge: null                      },
     { key: 'categories', label: 'Categories', badge: null                      },
     { key: 'reviews',    label: 'Reviews',    badge: kpi.reviewCount   || null,
       badgeTitle: 'reviews awaiting approval' },
@@ -474,7 +476,18 @@ export default function AdminDashboard() {
             {/* Low stock: one row per product, inline +1 button */}
             {acLowStock.length > 0 && (
               <div className="ac-section">
-                <span className="ac-section__label">Low Stock</span>
+                {/* "View all" was rendered once PER PRODUCT — twelve buttons
+                    firing the identical jumpToTab('products'). Twelve copies
+                    of one link is noise that makes the +1 button, the only
+                    per-row action that does anything per row, harder to
+                    find. One link, on the section it belongs to. */}
+                <span className="ac-section__label">
+                  Low Stock
+                  <button className="ac-btn ac-btn--link"
+                    onClick={() => jumpToTab('products')}>
+                    View all →
+                  </button>
+                </span>
                 {acLowStock.map(p => (
                   <div key={p.id} className="ac-row">
                     <span className="ac-row__name">{p.name}</span>
@@ -483,10 +496,6 @@ export default function AdminDashboard() {
                       onClick={() => acAddStock(p)}
                       title="Add 1 unit to stock">
                       +1 stock
-                    </button>
-                    <button className="ac-btn ac-btn--link"
-                      onClick={() => jumpToTab('products')}>
-                      View all →
                     </button>
                   </div>
                 ))}

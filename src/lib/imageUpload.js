@@ -4,12 +4,12 @@
 import imageCompression from 'browser-image-compression';
 import { supabase } from './supabase';
 
-export const ACCEPTED_TYPES = [
+const ACCEPTED_TYPES = [
   'image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
 ];
-export const MAX_MB = 10;
+const MAX_MB = 10;
 
-export function friendlyStorageError(msg = '') {
+function friendlyStorageError(msg = '') {
   if (msg.includes('Bucket not found') || msg.includes('bucket'))
     return 'Storage bucket "images" not found. Go to Supabase → Storage → New bucket → name it "images" → toggle Public → Create.';
   if (msg.includes('row-level security') || msg.includes('security') || msg.includes('policy') || msg.includes('403') || msg.includes('Unauthorized'))
@@ -39,6 +39,132 @@ export function handleImgSelect(e, { onFile, onPreview, onInfo, onError }) {
   onFile?.(file);
   onPreview?.(URL.createObjectURL(file));
   onInfo?.(`${sizeMB.toFixed(1)} MB`);
+}
+
+// ── Background inspection ─────────────────────────────────────────────────
+// Answers one question BEFORE any heavy work happens: is this photo already
+// on a clean backdrop? Two cases count — a transparent PNG (already a
+// cutout) and a photo shot on white (a studio/flat-lay shot, which the
+// white-stage card renders identically to a cutout). In either case there
+// is nothing to remove, so running the ~40-80MB WASM model would cost the
+// admin a long wait and risk the model chewing a white part of the product,
+// for a result that looks the same.
+//
+// How: draw the image small, then look ONLY at the outer 5% frame — the
+// band a background occupies and a centred product almost never does.
+// Returns 'transparent' | 'white' | 'photo'. Never throws: anything it
+// cannot read (HEIC, a canvas that refuses) comes back as 'photo', which is
+// exactly the behaviour that existed before this function.
+export async function detectBackground(file) {
+  try {
+    const bmp = await createImageBitmap(file);
+    const W = 120;                                    // sample width, not display width
+    const H = Math.max(1, Math.round((W * bmp.height) / bmp.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, W, H);                   // downscale once
+    bmp.close?.();                                    // free the decoded bitmap
+    const { data } = ctx.getImageData(0, 0, W, H);    // flat RGBA, 4 bytes per pixel
+
+    const band = Math.max(2, Math.round(W * 0.05));   // frame thickness, in sample px
+    let edge = 0, clear = 0, white = 0;
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        // Skip the middle — that is where the product is; only judge the frame.
+        if (x >= band && y >= band && x < W - band && y < H - band) continue;
+        const i = (y * W + x) * 4;                    // index of this pixel's red byte
+        edge++;
+        if (data[i + 3] < 16) clear++;                                            // see-through
+        else if (data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235) white++; // near-white
+      }
+    }
+    if (!edge) return 'photo';
+    // 0.9 rather than 1.0: JPEG noise, a soft shadow, or a product that runs
+    // off the edge should not flip a genuinely white backdrop back to 'photo'.
+    if (clear / edge > 0.9) return 'transparent';
+    if ((white + clear) / edge > 0.9) return 'white';
+    return 'photo';
+  } catch {
+    return 'photo';
+  }
+}
+
+// ── Trim ─────────────────────────────────────────────────────────────────
+// Finds the dead border on a photo that sits on a clean backdrop, and
+// returns it as a crop box — { x, y, w, h } in the file's own pixels, or
+// null when there is nothing worth cutting.
+//
+// Why this exists: two products photographed at the same 1000x1000 still
+// render at different sizes on the shop if one has a 30% white margin baked
+// into the file. No CSS fixes that — the margin IS pixels. Cutting it off is
+// what makes a grid of products actually look uniform.
+//
+// It returns a BOX rather than a cropped file on purpose. The first version
+// decoded all 12 megapixels of a phone photo and scanned every one in JS:
+// 1.8 seconds, three times the cost of the encode, then re-encoded a
+// throwaway JPEG that the real encode immediately threw away again. The box
+// is measured on a 400px-wide copy instead (~60x fewer pixels) and handed to
+// uploadImage, which applies it inside the resize it was already doing — so
+// the crop now costs one draw call instead of a whole decode/encode round.
+// Precision lost by measuring small is absorbed by the 4% margin below.
+//
+// Only meaningful for 'white' / 'transparent' photos, where the border is
+// genuinely empty. Returns null on any doubt — a wrong crop eats the product.
+export async function findTrimBox(file, kind) {
+  if (kind !== 'white' && kind !== 'transparent') return null;
+  try {
+    const bmp = await createImageBitmap(file);
+    const FW = Math.min(400, bmp.width);                 // scan width
+    const FH = Math.max(1, Math.round((FW * bmp.height) / bmp.width));
+    const canvas = document.createElement('canvas');
+    canvas.width = FW; canvas.height = FH;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(bmp, 0, 0, FW, FH);
+    const { width: OW, height: OH } = bmp;
+    bmp.close?.();
+    const { data } = ctx.getImageData(0, 0, FW, FH);
+
+    const isBg = (i) =>
+      data[i + 3] < 16 ||                                                    // see-through
+      (kind === 'white' && data[i] > 235 && data[i + 1] > 235 && data[i + 2] > 235);
+
+    // A line counts as empty at 99.5%, not 100%: one speck of JPEG noise or a
+    // dust mark in the margin would otherwise stop the trim dead.
+    const lineIsBg = (fixed, len, index) => {
+      let solid = 0;
+      const allow = Math.max(1, Math.floor(len * 0.005));
+      for (let k = 0; k < len; k++) {
+        if (!isBg(index(fixed, k) * 4) && ++solid > allow) return false;
+      }
+      return true;
+    };
+    const rowAt = (y, x) => y * FW + x;
+    const colAt = (x, y) => y * FW + x;
+
+    let top = 0, bottom = FH - 1, left = 0, right = FW - 1;
+    while (top    < bottom && lineIsBg(top,    FW, rowAt)) top++;
+    while (bottom > top    && lineIsBg(bottom, FW, rowAt)) bottom--;
+    while (left   < right  && lineIsBg(left,   FH, colAt)) left++;
+    while (right  > left   && lineIsBg(right,  FH, colAt)) right--;
+
+    let w = right - left + 1, h = bottom - top + 1;
+    if (w < 8 || h < 8) return null;                     // suspiciously small — bail
+    if ((w * h) / (FW * FH) > 0.92) return null;         // barely a margin; not worth it
+
+    // Give the product a little air back so it isn't jammed against the edge.
+    const pad = Math.max(w, h) * 0.04;
+    left = Math.max(0, left - pad); top = Math.max(0, top - pad);
+    w = Math.min(FW - left, w + pad * 2); h = Math.min(FH - top, h + pad * 2);
+
+    const sx = OW / FW, sy = OH / FH;                    // scan px -> file px
+    return {
+      x: Math.round(left * sx), y: Math.round(top * sy),
+      w: Math.round(w * sx),    h: Math.round(h * sy),
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── Background removal ────────────────────────────────────────────────────
@@ -101,12 +227,15 @@ function canWebp() {
   return webpOK;
 }
 
-// The format to encode to. A cutout MUST keep its alpha channel — WebP
-// has one, JPEG does not, so a cutout on a browser without WebP falls
-// back to PNG rather than to a black-backgrounded JPEG.
-function targetFormat(isCutout) {
+// The format to encode to. A transparent image MUST keep its alpha channel
+// — WebP has one, JPEG does not, so it falls back to PNG on a browser
+// without WebP rather than to a black-backgrounded JPEG. This asks about
+// ALPHA, not about the cutout folder: a photo already shot on white gets
+// the cutout treatment without carrying any transparency, and should not
+// be forced into a heavy PNG for nothing.
+function targetFormat(hasAlpha) {
   if (canWebp()) return { mime: 'image/webp', ext: 'webp' };
-  return isCutout ? { mime: 'image/png', ext: 'png' } : { mime: 'image/jpeg', ext: 'jpg' };
+  return hasAlpha ? { mime: 'image/png', ext: 'png' } : { mime: 'image/jpeg', ext: 'jpg' };
 }
 
 // Re-encode at a given max edge. Returns null rather than throwing, so a
@@ -125,6 +254,29 @@ async function encode(file, maxEdge, mime) {
   }
 }
 
+// One pass: crop, resize and encode together. Used when findTrimBox found a
+// margin — the crop rides along with the resize the upload had to do anyway,
+// so trimming costs one extra draw call rather than its own decode+encode.
+// createImageBitmap does the cropping during decode, so the dead margin is
+// never even fully decoded. Returns null on failure; the caller falls back
+// to the plain (untrimmed) encode, which is a worse picture, not a broken one.
+async function encodeCropped(file, maxEdge, mime, crop) {
+  try {
+    const bmp = await createImageBitmap(file, crop.x, crop.y, crop.w, crop.h);
+    const scale = Math.min(1, maxEdge / Math.max(crop.w, crop.h));   // never upscale
+    const w = Math.max(1, Math.round(crop.w * scale));
+    const h = Math.max(1, Math.round(crop.h * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    canvas.getContext('2d').drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob = await new Promise(r => canvas.toBlob(r, mime, 0.82));
+    return blob ? new File([blob], file.name, { type: mime }) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function put(path, blob, mime) {
   const { error } = await supabase.storage
     .from('images')
@@ -137,19 +289,29 @@ async function put(path, blob, mime) {
 // onProgress(0-100) and onInfo(string) are optional callbacks for UI feedback.
 // Returns the public CDN URL string. Throws on upload failure.
 //
-// isCutout: true when `file` is a background-removed transparent PNG.
-// Two things change: the encode must keep an alpha channel (see
-// targetFormat above), and the storage path goes under 'products-cutout/'
-// rather than the plain folder — ProductCard reads that path to apply the
-// white-stage + drop-shadow treatment, so this is what turns a processed
-// photo into the "3D" look automatically, with no separate admin step.
-export async function uploadImage(file, folder = 'products', { onProgress, onInfo, isCutout = false } = {}) {
+// isCutout: store under 'products-cutout/' rather than the plain folder.
+// ProductCard reads that path to render the photo on the white stage,
+// uncropped — so this flag, not a DB column, is what gives a photo the
+// treatment. It is set for a background-removed PNG AND for a photo that
+// already arrived on a white backdrop, since both look right there.
+// hasAlpha: whether the file genuinely carries transparency, which is a
+// separate question — it decides the encoding only (see targetFormat).
+// It defaults to isCutout, so old callers behave exactly as before.
+export async function uploadImage(
+  file,
+  folder = 'products',
+  { onProgress, onInfo, isCutout = false, hasAlpha = isCutout, crop = null } = {},
+) {
   const originalMB = (file.size / 1024 / 1024).toFixed(1);
-  const { mime, ext } = targetFormat(isCutout);
+  const { mime, ext } = targetFormat(hasAlpha);
 
   // 0-60% of the progress bar is the encode; upload is the rest.
   onProgress?.(10);
-  const compressed = await encode(file, 1600, mime);
+  // crop is a box from findTrimBox — the empty margin around the product.
+  // Falls back to the plain encode if the one-pass version fails, so a bad
+  // crop box can never cost the admin the upload.
+  const compressed = (crop && await encodeCropped(file, 1600, mime, crop))
+    || await encode(file, 1600, mime);
   onProgress?.(60);
 
   // If the encode failed, upload the ORIGINAL under its OWN type and

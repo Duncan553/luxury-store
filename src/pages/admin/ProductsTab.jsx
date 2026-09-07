@@ -1,7 +1,9 @@
 import { useState, useRef } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../lib/supabase';
-import { handleImgSelect, uploadImage, removeBackground } from '../../lib/imageUpload';
+import { handleImgSelect, uploadImage, removeBackground, detectBackground, findTrimBox } from '../../lib/imageUpload';
+import PhotosModal from './PhotosModal';
+import { galleryOf } from '../../lib/gallery';
 import { STATUSES, BLANK_PRODUCT, statusFromQty, fmt, parseColours } from '../../lib/adminUtils';
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
@@ -240,11 +242,18 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
   const [imgInfo,  setImgInfo]  = useState('');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
-  // On by default — "every photo I post" gets the white-stage/3D treatment
-  // unless the admin explicitly turns it off for a shot that shouldn't have
-  // its background touched (already-styled flat-lay, a graphic, etc).
-  const [removeBg,   setRemoveBg]   = useState(true);
+  // OFF by default, and it stays off until the admin ticks it. It used to
+  // default ON, which meant every upload was silently re-cut by the model:
+  // most product shots already arrive on white, so it was work for nothing,
+  // and on a real photo it costs actual picture quality — the model softens
+  // and nibbles edges, and the result is re-encoded on top. Adding a white
+  // background is a decision about the product, so the person who knows the
+  // product makes it.
+  const [removeBg,   setRemoveBg]   = useState(false);
   const [bgStatus,   setBgStatus]   = useState('');   // progress text while processing
+  // What detectBackground said about the chosen file: 'photo' | 'white' |
+  // 'transparent'. Drives both the default toggle state and the hint text.
+  const [bgKind,     setBgKind]     = useState('photo');
   const fileRef = useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -277,7 +286,21 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
           image_url = await uploadImage(imgFile, 'products');
         }
       } else if (imgFile) {
-        image_url = await uploadImage(imgFile, 'products');
+        // Nothing to remove. A photo ALREADY on a clean backdrop still goes
+        // to the cutout folder, because that folder is what makes the card
+        // show it on the white stage uncropped — same look, none of the
+        // cost. Only a truly transparent file needs an alpha channel kept.
+        const clean = bgKind === 'white' || bgKind === 'transparent';
+        // Measure the empty margin, and let the upload's own resize apply it.
+        // Two products shot at the same size still show up at different sizes
+        // on the shop if one has a fat white border baked in — cutting it is
+        // what makes the grid uniform. null when there's nothing safe to cut.
+        const crop = await findTrimBox(imgFile, bgKind);
+        image_url = await uploadImage(imgFile, 'products', {
+          isCutout: clean,
+          hasAlpha: bgKind === 'transparent',
+          crop,
+        });
       }
       const qty = form.quantity === '' ? null : Number(form.quantity);
       const status = form.status === 'Available' || form.status === 'Low Stock'
@@ -349,7 +372,18 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
             {imgInfo && <p className="form-hint">{imgInfo}</p>}
             <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
               onChange={e => handleImgSelect(e, {
-                onFile: setImgFile, onPreview: setPreview, onInfo: setImgInfo, onError: setError,
+                // Read the photo's edges before deciding anything. A shot
+                // already on white, or an already-transparent PNG, has no
+                // background to remove — so the toggle starts OFF for it
+                // and the hint below says why. Still a checkbox: the admin
+                // overrides it if the detection called the photo wrong.
+                onFile: (f) => {
+                  setImgFile(f);
+                  setBgKind('photo');      // until the detector says otherwise
+                  setRemoveBg(false);      // never on its own — the admin ticks it
+                  detectBackground(f).then(setBgKind);
+                },
+                onPreview: setPreview, onInfo: setImgInfo, onError: setError,
               })} />
 
             {imgFile && (
@@ -359,8 +393,11 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
                 <span>
                   Remove background &amp; apply the white-stage look
                   <span className="form-hint" style={{ marginTop: 2 }}>
-                    Runs in your browser, takes a few seconds. Turn off for a photo
-                    that's already styled the way you want it.
+                    {bgKind === 'white'
+                      ? 'This photo is already on white — leave this off, there is nothing to add.'
+                      : bgKind === 'transparent'
+                        ? 'This photo is already a cutout — leave this off, there is nothing to remove.'
+                        : 'Only for a photo with a background you want gone. It runs in your browser and re-cuts the picture, which costs some quality — leave it off if the shot is already good.'}
                   </span>
                 </span>
               </label>
@@ -443,6 +480,7 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
 export default function ProductsTab({ products, categories, setProducts }) {
   const [showModal,      setShowModal]      = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [photosFor,      setPhotosFor]      = useState(null);   // product whose gallery is open
   const [toast,          setToast]          = useState({ msg: '', type: 'success' });
   const toastTimer = useRef(null);
 
@@ -607,11 +645,20 @@ export default function ProductsTab({ products, categories, setProducts }) {
                     </select>
                   </td>
                   <td>
-                    <button className="btn btn-danger"
-                      style={{ height: 30, padding: '0 10px', fontSize: 11 }}
-                      onClick={() => deleteProduct(p.id, p.name)}>
-                      Delete
-                    </button>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      {/* Photo count doubles as the label — the owner can see
+                          at a glance which products still have only one shot. */}
+                      <button className="btn btn-outline"
+                        style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                        onClick={() => setPhotosFor(p)}>
+                        Photos ({galleryOf(p).length})
+                      </button>
+                      <button className="btn btn-danger"
+                        style={{ height: 30, padding: '0 10px', fontSize: 11 }}
+                        onClick={() => deleteProduct(p.id, p.name)}>
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -625,6 +672,20 @@ export default function ProductsTab({ products, categories, setProducts }) {
           categories={categories}
           onClose={() => setShowModal(false)}
           onAdded={handleAdded}
+          showToast={showToast}
+        />
+      )}
+
+      {photosFor && (
+        <PhotosModal
+          product={photosFor}
+          onClose={() => setPhotosFor(null)}
+          // Keep the open modal AND the table row on the same data, so the
+          // count in the button and the thumbnail update as photos land.
+          onSaved={(updated) => {
+            setPhotosFor(updated);
+            setProducts(prev => prev.map(p => (p.id === updated.id ? updated : p)));
+          }}
           showToast={showToast}
         />
       )}
