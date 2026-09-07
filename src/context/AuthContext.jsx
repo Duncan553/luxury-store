@@ -11,18 +11,48 @@ const READONLY_EMAILS = (import.meta.env.VITE_ADMIN_READONLY_EMAILS || '')
   .map(e => e.trim().toLowerCase())
   .filter(Boolean);
 
+// ── Session diagnostics ──────────────────────────────────────────────────
+// Why this exists: when the dashboard kicks you back to the login page, the
+// app itself never decides that. The ONLY way `user` becomes null is
+// onAuthStateChange firing with no session, which happens inside
+// supabase-js — so from the outside a dying session looks like a silent
+// redirect with nothing to read.
+//
+// This prints one line per auth event with the minute-by-minute truth:
+// which event fired, and how long the access token had left. Leave the
+// console open on the dashboard; when it logs you out, the last lines say
+// whether the token simply expired (no TOKEN_REFRESHED beforehand = the
+// refresh never ran) or a refresh was attempted and rejected.
+//
+// It logs no token and no password — only the event name, the email, and
+// the expiry clock. Filter the console with "[auth]".
+function authLog(event, session) {
+  const exp = session?.expires_at;                      // unix seconds, or undefined
+  const left = exp ? Math.round(exp - Date.now() / 1000) : null;
+  console.info(
+    `[auth] ${new Date().toLocaleTimeString()} ${event}`,
+    session
+      ? `user=${session.user?.email} token expires in ${Math.floor(left / 60)}m${left % 60}s`
+      : 'NO SESSION — this is what sends you back to the login page',
+  );
+}
+
 export function AuthProvider({ children }) {
   const [user,    setUser]    = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     supabase.auth.getSession()
-      .then(({ data: { session } }) => setUser(session?.user ?? null))
+      .then(({ data: { session } }) => {
+        setUser(session?.user ?? null);
+        authLog('getSession', session);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
+      authLog(event, session);
     });
 
     return () => subscription.unsubscribe();

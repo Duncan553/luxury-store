@@ -9,9 +9,22 @@ const ACCEPTED_TYPES = [
 ];
 const MAX_MB = 10;
 
+// Does this storage error mean "your login is no longer valid" rather than
+// "your database is misconfigured"? Storage answers an expired or rejected
+// token with 401/Unauthorized/JWT wording, which is NOT a policy problem —
+// telling an admin to go run SQL when their session simply lapsed sends
+// them to fix a database that was never broken.
+function isAuthError(msg = '') {
+  return /jwt|401|unauthorized|invalid claim|missing sub|token/i.test(msg);
+}
+
 function friendlyStorageError(msg = '') {
   if (msg.includes('Bucket not found') || msg.includes('bucket'))
     return 'Storage bucket "images" not found. Go to Supabase → Storage → New bucket → name it "images" → toggle Public → Create.';
+  // Checked BEFORE the policy branch below, which matches on 'Unauthorized'
+  // and '403' and would otherwise swallow every expired-session upload.
+  if (isAuthError(msg))
+    return 'Your session expired. Sign out, sign back in, and upload again — nothing is wrong with the photo.';
   if (msg.includes('row-level security') || msg.includes('security') || msg.includes('policy') || msg.includes('403') || msg.includes('Unauthorized'))
     return 'Upload blocked by storage policy. Run the storage SQL in Supabase (see schema.sql).';
   if (msg.includes('exceeded') || msg.includes('size'))
@@ -404,10 +417,30 @@ async function encodeCropped(file, maxEdge, mime, crop) {
   }
 }
 
-async function put(path, blob, mime) {
-  const { error } = await supabase.storage
+// One upload attempt. Split out so put() can run it twice.
+async function putOnce(path, blob, mime) {
+  return supabase.storage
     .from('images')
     .upload(path, blob, { upsert: false, contentType: mime });
+}
+
+async function put(path, blob, mime) {
+  let { error } = await putOnce(path, blob, mime);
+
+  // An admin who sat on the dashboard filling in a product can reach this
+  // line with a dead access token: the form is still on screen, the app
+  // still thinks it is signed in, and only the write fails. That is why
+  // uploading used to start working again after a logout + reload — the
+  // reload is what fetched a fresh token.
+  //
+  // So do the reload's job here instead: force one refresh and retry. If
+  // the refresh works the admin never notices; if it doesn't, the message
+  // below tells them to sign in again rather than blaming storage policy.
+  if (error && isAuthError(error.message)) {
+    const { error: refreshErr } = await supabase.auth.refreshSession();
+    if (!refreshErr) ({ error } = await putOnce(path, blob, mime));
+  }
+
   if (error) throw new Error(friendlyStorageError(error.message));
   return supabase.storage.from('images').getPublicUrl(path).data.publicUrl;
 }

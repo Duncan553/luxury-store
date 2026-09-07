@@ -86,7 +86,9 @@
   position: relative;
   aspect-ratio: 3/4;
   overflow: hidden;
-  background: var(--surface2);
+  /* Same white stage as the card (--stage, index.css). A shopper who taps
+     a card must not watch a white frame turn black on the way in. */
+  background: var(--stage);
 }
 /* contain, not cover: this is the view a shopper opens to actually inspect
    the product before buying, so it is the last place that should be
@@ -105,15 +107,15 @@
 }
 .lb-img-placeholder {
   width: 100%; height: 100%;
-  background: linear-gradient(135deg, var(--surface2) 0%, var(--surface) 100%);
+  background: var(--stage-empty);
 }
 
 /* Plain white stage for a cutout — matches ProductCard.css's
    .pcard__img--cutout. The drop-shadow/lift treatment this used to have
    read as an artificial floating cardboard cutout rather than a real
    product photo; a flat white background is what was actually asked for. */
+/* Colour comes from the base rule now; this variant only owns the inset. */
 .lb-img-wrap--cutout {
-  background: #ffffff;
   display: grid; place-items: center;
   padding: 6%;
 }
