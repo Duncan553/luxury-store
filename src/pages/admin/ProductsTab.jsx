@@ -1,7 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Papa from 'papaparse';
 import { supabase } from '../../lib/supabase';
-import { handleImgSelect, uploadImage, removeBackground, detectBackground, findTrimBox } from '../../lib/imageUpload';
+import { handleImgSelect, detectBackground, uploadProductPhoto } from '../../lib/imageUpload';
 import PhotosModal from './PhotosModal';
 import { galleryOf } from '../../lib/gallery';
 import { STATUSES, BLANK_PRODUCT, statusFromQty, fmt, parseColours } from '../../lib/adminUtils';
@@ -237,8 +237,10 @@ function ImportCsvModal({ categories, onClose, onImported, showToast }) {
 // ── Add-product modal ─────────────────────────────────────────────────────────
 function AddProductModal({ categories, onClose, onAdded, showToast }) {
   const [form,     setForm]     = useState(BLANK_PRODUCT);
-  const [imgFile,  setImgFile]  = useState(null);
-  const [preview,  setPreview]  = useState('');
+  // An ordered LIST, not one file: a product should be swipeable the moment
+  // it is created, rather than added with one photo and then reopened to
+  // become a gallery. photos[0] is the cover.
+  const [photos,   setPhotos]   = useState([]);   // [{ file, preview, kind }]
   const [imgInfo,  setImgInfo]  = useState('');
   const [saving,   setSaving]   = useState(false);
   const [error,    setError]    = useState('');
@@ -251,12 +253,38 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
   // product makes it.
   const [removeBg,   setRemoveBg]   = useState(false);
   const [bgStatus,   setBgStatus]   = useState('');   // progress text while processing
-  // What detectBackground said about the chosen file: 'photo' | 'white' |
-  // 'transparent'. Drives both the default toggle state and the hint text.
-  const [bgKind,     setBgKind]     = useState('photo');
+  // The hint describes the whole batch. Only when EVERY picked photo is
+  // already on a clean backdrop is there truly nothing to remove; one real
+  // photo in the set and the toggle is worth offering.
+  const bgKind = photos.length === 0 ? 'photo'
+    : photos.every(p => p.kind === 'transparent') ? 'transparent'
+    : photos.every(p => p.kind === 'white' || p.kind === 'transparent') ? 'white'
+    : 'photo';
   const fileRef = useRef(null);
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const movePhoto = (from, to) => setPhotos(prev => {
+    if (to < 0 || to >= prev.length) return prev;
+    const next = prev.slice();
+    next.splice(to, 0, next.splice(from, 1)[0]);
+    return next;
+  });
+
+  // Revoke the object URL as the thumbnail goes. These hold the whole file
+  // in memory, and an admin trying shots out on a phone would otherwise
+  // accumulate every photo they picked until the tab was closed.
+  const removePhoto = (i) => setPhotos(prev => {
+    URL.revokeObjectURL(prev[i].preview);
+    return prev.filter((_, n) => n !== i);
+  });
+
+  // Same reason, for whatever is still on screen when the modal closes.
+  // photosRef, not photos, so the cleanup sees the final list rather than
+  // the empty one this effect closed over on mount.
+  const photosRef = useRef(photos);
+  photosRef.current = photos;
+  useEffect(() => () => photosRef.current.forEach(x => URL.revokeObjectURL(x.preview)), []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -266,42 +294,33 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
     if (isNaN(Number(form.price)) || Number(form.price) <= 0) {
       setError('Enter a valid price.'); return;
     }
+    // products.category is NOT NULL in the database, but this form offered
+    // "— None —" and sent null for it, so adding a product without picking a
+    // category failed with a raw Postgres constraint error the owner could
+    // do nothing with. It failed AFTER the photos had uploaded, too, so every
+    // attempt left orphaned files in storage. Checked here, before any upload
+    // starts. Required is also the right answer on its own terms: the shop is
+    // browsed by category, so a product without one is unreachable.
+    if (!form.category) {
+      setError('Pick a category — the shop is browsed by category, so a product without one has nowhere to appear.');
+      return;
+    }
     setSaving(true);
     try {
-      let image_url = null;
-      if (imgFile && removeBg) {
-        // Background removal is a local, on-device step (nothing leaves the
-        // browser) — but it can take real time on a first use (the model
-        // downloads once, then is cached). If it fails for any reason, fall
-        // back to the original photo rather than block adding the product —
-        // a plain photo beats no product at all.
-        try {
-          setBgStatus('Removing background… 0%');
-          const cutout = await removeBackground(imgFile, pct => setBgStatus(`Removing background… ${pct}%`));
-          setBgStatus('Background removed ✓ uploading…');
-          image_url = await uploadImage(cutout, 'products', { isCutout: true });
-        } catch (bgErr) {
-          console.warn('[background removal]', bgErr.message);
-          setBgStatus('Background removal failed — uploading original photo instead.');
-          image_url = await uploadImage(imgFile, 'products');
-        }
-      } else if (imgFile) {
-        // Nothing to remove. A photo ALREADY on a clean backdrop still goes
-        // to the cutout folder, because that folder is what makes the card
-        // show it on the white stage uncropped — same look, none of the
-        // cost. Only a truly transparent file needs an alpha channel kept.
-        const clean = bgKind === 'white' || bgKind === 'transparent';
-        // Measure the empty margin, and let the upload's own resize apply it.
-        // Two products shot at the same size still show up at different sizes
-        // on the shop if one has a fat white border baked in — cutting it is
-        // what makes the grid uniform. null when there's nothing safe to cut.
-        const crop = await findTrimBox(imgFile, bgKind);
-        image_url = await uploadImage(imgFile, 'products', {
-          isCutout: clean,
-          hasAlpha: bgKind === 'transparent',
-          crop,
-        });
+      // Upload in the order they were picked, so images[0] really is the
+      // cover the admin saw first. Sequential rather than parallel on
+      // purpose: this runs on Kenyan mobile data, where four uploads racing
+      // each other finish slower than four in a row and give the admin no
+      // honest progress to watch.
+      const urls = [];
+      for (let i = 0; i < photos.length; i++) {
+        setBgStatus(photos.length > 1 ? `Photo ${i + 1} of ${photos.length}…` : 'Uploading…');
+        urls.push(await uploadProductPhoto(photos[i].file, {
+          removeBg,
+          onStatus: (msg) => setBgStatus(photos.length > 1 ? `Photo ${i + 1} of ${photos.length} — ${msg}` : msg),
+        }));
       }
+      const image_url = urls[0] ?? null;
       const qty = form.quantity === '' ? null : Number(form.quantity);
       const status = form.status === 'Available' || form.status === 'Low Stock'
         ? statusFromQty(qty ?? 999)
@@ -311,10 +330,22 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
         price:     Number(form.price),
         category:  form.category || null,
         status,
-        quantity:  qty,
         image_url,
+        // The trigger mirrors images[0] back into image_url, so these can
+        // never disagree; both are sent so the row is correct even if the
+        // trigger is missing on some other database.
+        images: urls,
         created_at: new Date().toISOString(),
       };
+      // quantity is `int not null default 0` in the database, but a blank
+      // stock box produced null here and Postgres rejected the whole insert
+      // — so adding a product without typing a stock count failed with a
+      // raw constraint error, after the photos had already uploaded. The key
+      // is omitted rather than forced to 0 so the column's own default
+      // stands: "not counted yet" is the database's decision to define, not
+      // this form's to invent.
+      if (qty !== null) row.quantity = qty;
+
       const colours = parseColours(form.colours);
       if (colours) row.colours = colours;
       // Set when the colours column had to be dropped, so the success
@@ -322,6 +353,7 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
       // lives in ProductsTab, not in this modal, and reading it here threw
       // a ReferenceError.
       let noteColoursSkipped = false;
+      let noteGallerySkipped = false;
 
       let { data, error: err } = await supabase.from('products').insert(row).select().single();
 
@@ -336,12 +368,25 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
         ({ data, error: err } = await supabase.from('products').insert(row).select().single());
         if (!err) noteColoursSkipped = true;
       }
+      // Same rescue for the gallery column: on a database without migration
+      // 20260907000000 the whole insert is rejected for one unknown key.
+      // Save the product with its cover rather than lose it — the extra
+      // photos are already in storage and can be re-attached later.
+      if (err && (err.code === 'PGRST204' || /images/i.test(err.message || ''))) {
+        delete row.images;
+        ({ data, error: err } = await supabase.from('products').insert(row).select().single());
+        if (!err) noteGallerySkipped = true;
+      }
       if (err) throw err;
       onAdded(data);
       showToast(
         noteColoursSkipped
           ? 'Product added — colours need the database migration first.'
-          : 'Product added.',
+          : noteGallerySkipped
+            ? 'Product added with its cover — extra photos need the database migration first.'
+            : urls.length > 1
+              ? `Product added with ${urls.length} photos.`
+              : 'Product added.',
         'success'
       );
       onClose();
@@ -363,30 +408,63 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
         <form onSubmit={handleSubmit}>
           {/* Image */}
           <div className="form-group">
-            <label className="form-label">Product Image</label>
-            <div className="img-upload" onClick={() => fileRef.current?.click()}>
-              {preview
-                ? <img src={preview} alt="Preview" className="img-cover" style={{ width: '100%', height: '100%' }} />
-                : <div className="img-upload__placeholder"><span>Tap to upload</span></div>}
-            </div>
-            {imgInfo && <p className="form-hint">{imgInfo}</p>}
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }}
-              onChange={e => handleImgSelect(e, {
-                // Read the photo's edges before deciding anything. A shot
-                // already on white, or an already-transparent PNG, has no
-                // background to remove — so the toggle starts OFF for it
-                // and the hint below says why. Still a checkbox: the admin
-                // overrides it if the detection called the photo wrong.
-                onFile: (f) => {
-                  setImgFile(f);
-                  setBgKind('photo');      // until the detector says otherwise
-                  setRemoveBg(false);      // never on its own — the admin ticks it
-                  detectBackground(f).then(setBgKind);
-                },
-                onPreview: setPreview, onInfo: setImgInfo, onError: setError,
-              })} />
+            <label className="form-label">
+              Product Photos
+              <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: 'var(--muted2)', fontSize: 12, marginLeft: 6 }}>
+                pick several — the first is the cover, the rest swipe
+              </span>
+            </label>
 
-            {imgFile && (
+            {/* Same grid as the Photos manager, so adding photos looks and
+                behaves identically whether the product exists yet or not. */}
+            <ul className="photo-grid">
+              {photos.map((ph, i) => (
+                <li key={ph.preview} className={`photo-cell${i === 0 ? ' photo-cell--cover' : ''}`}>
+                  <img src={ph.preview} alt={`Photo ${i + 1}`} />
+                  {i === 0 && <span className="photo-cell__tag">Cover</span>}
+                  <div className="photo-cell__bar">
+                    <button type="button" title="Move left" disabled={i === 0 || saving}
+                      onClick={() => movePhoto(i, i - 1)}>‹</button>
+                    <button type="button" title="Move right" disabled={i === photos.length - 1 || saving}
+                      onClick={() => movePhoto(i, i + 1)}>›</button>
+                    <button type="button" title="Remove" className="photo-cell__del" disabled={saving}
+                      onClick={() => removePhoto(i)}>✕</button>
+                  </div>
+                </li>
+              ))}
+              <li className="photo-cell photo-cell--add" onClick={() => !saving && fileRef.current?.click()}>
+                <span>{photos.length ? '+ Add more' : '+ Add photos'}</span>
+              </li>
+            </ul>
+            {imgInfo && <p className="form-hint">{imgInfo}</p>}
+            {/* multiple: pick all four shots of one bag in one go. Each file
+                still goes through handleImgSelect, so the type and size
+                checks are exactly the ones a single pick always had. */}
+            <input ref={fileRef} type="file" accept="image/*" multiple style={{ display: 'none' }}
+              onChange={e => {
+                const picked = [];
+                for (const f of e.target.files) {
+                  handleImgSelect({ target: { files: [f] } }, {
+                    onFile: (good) => picked.push(good),
+                    onError: setError,
+                  });
+                }
+                e.target.value = '';        // let the same file be picked again
+                if (!picked.length) return;
+                const added = picked.map(file => ({
+                  file, preview: URL.createObjectURL(file),
+                  kind: 'photo',            // until the detector says otherwise
+                }));
+                setPhotos(prev => [...prev, ...added]);
+                setImgInfo(`${(picked.reduce((n, f) => n + f.size, 0) / 1048576).toFixed(1)} MB selected`);
+                // Read each photo's edges in the background. It drives the
+                // hint and the storage folder — never the toggle, which is
+                // the admin's to tick.
+                added.forEach(entry => detectBackground(entry.file).then(kind =>
+                  setPhotos(prev => prev.map(x => (x.preview === entry.preview ? { ...x, kind } : x)))));
+              }} />
+
+            {photos.length > 0 && (
               <label className="bg-removal-toggle">
                 <input type="checkbox" checked={removeBg}
                   onChange={e => setRemoveBg(e.target.checked)} disabled={saving} />
@@ -394,9 +472,9 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
                   Remove background &amp; apply the white-stage look
                   <span className="form-hint" style={{ marginTop: 2 }}>
                     {bgKind === 'white'
-                      ? 'This photo is already on white — leave this off, there is nothing to add.'
+                      ? 'Already on white — leave this off, there is nothing to add.'
                       : bgKind === 'transparent'
-                        ? 'This photo is already a cutout — leave this off, there is nothing to remove.'
+                        ? 'Already cutouts — leave this off, there is nothing to remove.'
                         : 'Only for a photo with a background you want gone. It runs in your browser and re-cuts the picture, which costs some quality — leave it off if the shot is already good.'}
                   </span>
                 </span>
@@ -422,7 +500,7 @@ function AddProductModal({ categories, onClose, onAdded, showToast }) {
             <div className="form-group">
               <label className="form-label">Category</label>
               <select value={form.category} onChange={e => set('category', e.target.value)}>
-                <option value="">— None —</option>
+                <option value="">— Choose —</option>
                 {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </div>

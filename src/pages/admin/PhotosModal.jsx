@@ -1,9 +1,7 @@
 import { useState, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import { galleryOf } from '../../lib/gallery';
-import {
-  handleImgSelect, uploadImage, removeBackground, detectBackground, findTrimBox,
-} from '../../lib/imageUpload';
+import { handleImgSelect, uploadProductPhoto } from '../../lib/imageUpload';
 
 // Manage every photo on one product: add more, drop one, choose which is the
 // cover. Deliberately ONE screen for both new and old products — the Add
@@ -52,15 +50,11 @@ export default function PhotosModal({ product, onClose, onSaved, showToast }) {
       const file = files[i];
       setBusy(`Uploading ${i + 1} of ${files.length}…`);
       try {
-        const kind = await detectBackground(file);
-        // Same rule as the add form: the model only runs when a human asks
-        // for it. Here nobody has, so a photo is uploaded as shot — trimmed
-        // of its empty margin when it has one, never re-cut.
-        const crop = await findTrimBox(file, kind);
-        const clean = kind === 'white' || kind === 'transparent';
-        urls.push(await uploadImage(file, 'products', {
-          isCutout: clean, hasAlpha: kind === 'transparent', crop,
-        }));
+        // Same rule as the add form, and literally the same function: the
+        // model only runs when a human ticks the box, and nobody has ticked
+        // one here — so a photo is stored as shot, trimmed of its empty
+        // margin when it has one, never re-cut.
+        urls.push(await uploadProductPhoto(file));
       } catch (e) {
         setError(e.message);
         break;                                          // keep whatever landed

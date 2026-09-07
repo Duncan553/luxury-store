@@ -240,9 +240,16 @@ select option { background: var(--surface2); }
 .stars { color: var(--gold); font-size: 16px; }
 
 /* ─── Product grid ───────────────────────────────────────────────────────── */
+/* minmax(0, 1fr), not 1fr. A bare 1fr means minmax(AUTO, 1fr), and that
+   auto floor is the item's min-content width — so a column refuses to go
+   narrower than the widest unbreakable thing inside the card. On a 375px
+   phone that floor was 181px per card (a "Add to Cart" button that cannot
+   wrap, beside the price), and two of them plus the gap came to 363px in a
+   335px row: the whole shop scrolled sideways. minmax(0, …) removes the
+   floor so the track really is an equal share of the row. */
 .products-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
 }
 
@@ -291,16 +298,16 @@ select option { background: var(--surface2); }
 
 /* ─── Mobile ─────────────────────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .products-grid { grid-template-columns: repeat(3, 1fr); }
+  .products-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 @media (max-width: 768px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); }
+  .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .section { padding: 64px 0; }
   .container { padding: 0 20px; }
   .btn { height: 52px; }
 }
 @media (max-width: 480px) {
-  .products-grid { grid-template-columns: repeat(2, 1fr); gap: 1px; }
+  .products-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; }
 }
 
 /* ═══ EDITORIAL KIT ═══════════════════════════════════════════════════
@@ -417,3 +424,40 @@ select option { background: var(--surface2); }
 @media (prefers-reduced-motion: reduce) {
   .reveal, .reveal-stagger > * { transition-duration: 0.01ms; transform: none; }
 }
+
+/* ═══ TOUCH TARGETS ═══════════════════════════════════════════════════
+   Apple and Google both put the smallest reliable finger target at ~44px.
+   The big buttons were raised to that in an earlier pass; the small ICON
+   controls were missed — and those are exactly the ones you reach for one
+   handed on a phone. Measured in a 390px viewport: the cart drawer's close
+   was 23x26, the quantity − / + were 26x26, the ✕ that removes a line from
+   the cart was 16x21, the admin modal close 29x28.
+
+   The rule grows the reachable box, never the glyph: the icons look
+   identical, there is simply more of them to hit.
+
+   Both conditions, deliberately. (hover: none) is the honest test — a
+   tablet in portrait is still a finger, whatever its width. The 480px arm
+   is there because a phone-sized viewport wants finger-sized controls
+   regardless of what the browser claims about hover, and because a rule
+   that only ever applies on hardware I cannot drive is a rule nobody can
+   check.
+   ══════════════════════════════════════════════════════════════════════ */
+@media (hover: none), (max-width: 480px) {
+  .cart-drawer__close,
+  .cart-item__remove,
+  .admin-modal__close,
+  .cart-item__qty button,
+  .stock-btn,
+  .photo-cell__bar button {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+/* The carousel dots want the same treatment, but that rule lives in
+   Lightbox.css: a media query adds no specificity, and Lightbox.css loads
+   after this file, so its .lb-dot { width: 6px } would simply win here.
+   Component overrides belong beside the component. */

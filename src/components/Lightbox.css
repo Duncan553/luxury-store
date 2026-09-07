@@ -278,3 +278,17 @@
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.28);
   flex-shrink: 0;
 }
+
+/* ── Touch: the dots ────────────────────────────────────────────────────
+   On a phone the arrows are hidden, so swipe is the gesture and the dots
+   are how you correct an overshoot. At 6px with a 6px gap they were
+   unhittable — a finger landing 4px off already caught the NEXT dot.
+   The dot grows a little and a transparent ::after carries the real target,
+   so the row still looks like an indicator rather than a toolbar. The gap
+   grows to match: without it, bigger targets would just overlap and the
+   wrong photo would be the easy one to hit. */
+@media (hover: none), (max-width: 480px) {
+  .lb-dots { gap: 16px; bottom: 12px; }
+  .lb-dot { width: 8px; height: 8px; position: relative; }
+  .lb-dot::after { content: ''; position: absolute; inset: -9px; }
+}

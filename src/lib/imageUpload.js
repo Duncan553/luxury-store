@@ -201,6 +201,42 @@ export async function removeBackground(file, onProgress) {
 }
 
 
+// Everything that happens to ONE product photo, in one place: read its
+// backdrop, cut the background only if a human asked, trim the dead margin,
+// and store it where the card will stage it correctly. Both screens that
+// upload photos (Add Product, and the Photos manager) call this — the rules
+// are subtle enough that two copies would drift, and a photo would then be
+// staged one way when added and another way when appended later.
+//
+// removeBg is the admin's checkbox, never inferred.
+export async function uploadProductPhoto(file, { removeBg = false, onStatus } = {}) {
+  const kind = await detectBackground(file);
+
+  if (removeBg) {
+    try {
+      onStatus?.('Removing background… 0%');
+      const cutout = await removeBackground(file, pct => onStatus?.(`Removing background… ${pct}%`));
+      onStatus?.('Background removed ✓ uploading…');
+      return await uploadImage(cutout, 'products', { isCutout: true });
+    } catch (err) {
+      // A failed cut must never cost the admin the upload: a plain photo
+      // beats no product at all. Fall through to the untouched path.
+      console.warn('[background removal]', err.message);
+      onStatus?.('Background removal failed — uploading the original photo.');
+    }
+  }
+
+  // A photo already on a clean backdrop still goes to the cutout folder,
+  // because that folder is what makes the card show it on the white stage
+  // uncropped — the same look without paying for the model. Only a truly
+  // transparent file needs its alpha channel kept in the encode.
+  const clean = kind === 'white' || kind === 'transparent';
+  const crop  = await findTrimBox(file, kind);
+  return uploadImage(file, 'products', {
+    isCutout: clean, hasAlpha: kind === 'transparent', crop,
+  });
+}
+
 // ── Encoding ─────────────────────────────────────────────────────────
 // Everything the site serves is WebP. That was a one-off conversion done
 // over the existing files, which left a hole: the admin uploader still

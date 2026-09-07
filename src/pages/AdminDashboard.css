@@ -707,3 +707,19 @@
   color: var(--muted); font-size: 11px; text-align: center; padding: 8px;
 }
 .photo-cell--add:hover { border-color: var(--gold); color: var(--text); }
+
+/* ── Touch: table row actions ───────────────────────────────────────────
+   Photos / Delete carry an inline height:30 from the JSX, and an inline
+   style beats any stylesheet — but only for the property it sets. min-height
+   is a different property, so it raises the box to a finger without the JSX
+   having to change. Measured at 375px: they were 91x30 and 70x30. */
+@media (hover: none), (max-width: 480px) {
+  .admin-tbl .btn,
+  .tab-header-row .btn { min-height: 44px; }
+  /* The inline editors in each row are the controls the owner actually
+     works in — a 24px-tall status dropdown is a miss-and-retry on a phone,
+     and a mis-tap here changes what the shop says is in stock. */
+  .inline-select,
+  .inline-edit,
+  .stock-btn { min-height: 44px; }
+}

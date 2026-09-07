@@ -223,6 +223,14 @@
   /* Auto-width already fits "Add to Cart" at any screen size — this just
      upsizes the tap target to a real 44px, the accessibility minimum. */
   .pcard__btn { min-height: 44px; padding: 0 16px; font-size: 10.5px; }
+
+  /* Two cards on a 375px phone leave about 135px inside each one, and the
+     price beside an unwrappable "Add to Cart" needs 148px. Side by side is
+     what made the grid demand more width than the screen had. Stacked, the
+     button gets the full card width — a bigger tap target on the smallest
+     screen, which is the right way round. */
+  .pcard__footer { flex-wrap: wrap; gap: 8px; }
+  .pcard__btn { width: 100%; }
   /* The 44px rule above only ever covered .pcard__btn. The buttons that sit
      ON the image — "Add to Cart" and "Quick View" — are .pcard__overlay-btn,
      and their 11px padding left them 34px and 36px tall on a phone, under
