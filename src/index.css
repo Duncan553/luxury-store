@@ -7,6 +7,24 @@
   --surface:     #0f0f0f;
   --surface2:    #161616;
   --surface3:    #1e1e1e;
+
+  /* PHOTO STAGE — the colour behind a product photo, everywhere one is
+     shown whole (object-fit: contain) inside a fixed-ratio box. Every
+     photo leaves some of that box empty: the letterbox bars when its
+     aspect ratio isn't the box's, plus the padding inset on all four
+     sides. That empty space shows this colour.
+
+     It is white on purpose, and it is NOT --surface2. When it was dark,
+     the stage was only white for photos stored under 'products-cutout/',
+     so a lifestyle shot uploaded to the plain folder got black bars while
+     the card beside it got a white frame — the grid read as broken. One
+     token means every product sits on the same stage no matter which
+     folder its photo landed in, including every future upload, and no
+     photo has to be altered to get there. */
+  --stage:       #ffffff;
+  /* Shown while a photo is still loading. Light, so a card doesn't flash
+     dark and then snap to white the moment the image arrives. */
+  --stage-empty: #f2f0ed;
   --border:      rgba(255,255,255,0.07);
   --border2:     rgba(255,255,255,0.12);
 
